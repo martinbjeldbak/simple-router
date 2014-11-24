@@ -1,0 +1,94 @@
+This document describes the environment for the Mininet sr assignment.  You will
+login to a virtual topology like this one (the IP addresses will be different,
+but the nodes will be arranged identically):
+
+
+                                         Application Server 1
+                                        +====================+
+                                        |                    |
+                                        |   107.21.41.195    |
+                                        |                    |
+                                        +====================+
+                                                /
+                                               /
+                                              /
+                    eth3:                    /
+                   10.0.1.11                /     eth1: 107.23.34.64
+                           +============(eth1)==+
+                           |                    |
+  Internet =============(eth3)  Your Router     |
+                           |                    |
+                           +============(eth2)==+
+                                            \    eth2: 107.21.14.129
+                                             \
+                                              \
+                                               \
+                                        +====================+
+                                        |                    |
+                                        |  107.21.17.29      |
+                                        |                    |
+                                        +====================+
+                                         Application Server 2
+
+
+To connect to a topology, first compile the stub code.
+Then, you can invoke sr as follows:
+
+  $ ./sr
+
+By default, ./sr will connect to the mininet controller on localhost.
+If you would like to run "sr" remotely, invoke sr as follows:
+
+  $ ./sr -s <controller_ip>
+
+Your output upon connecting should look like this:
+
+Using VNS sr stub code revised 2009-10-14 (rev 0.20)
+Loading filters
+---------------------------------------------
+no filters specified. accepting all connections.
+---------------------------------------------
+Client ubuntu connecting to Server localhost:8888
+Requesting topology 0
+successfully authenticated as ubuntu
+Connected to new instantiation of topology 0
+Loading routing table
+---------------------------------------------
+Destination	Gateway		Mask	Iface
+0.0.0.0         10.0.1.1        0.0.0.0 eth3
+107.21.41.195           107.21.41.195   255.255.255.255 eth1
+107.21.17.29            107.21.17.29    255.255.255.255 eth2
+---------------------------------------------
+Router interfaces:
+eth3    HWaddr0a:2d:eb:6e:0e:29
+        inet addr 10.0.1.11
+eth2    HWaddr4a:56:b8:89:4c:b6
+        inet addr 107.21.14.129
+eth1    HWaddr5e:c3:6a:dd:e5:c8
+        inet addr 107.23.34.64
+ <-- Ready to process packets -->
+
+
+IMPORTANT: The system has more users than IP addresses, so you are not assigned
+a particular set of static IP addresses.  This means each time you connect you
+MAY receive a different set of IP addresses.  However, the system remembers the
+last IP block assigned to you and will always re-assign it to you unless someone
+else is currently using it (in which case you will get a new set of IP
+addresses).  Your routing table (stored in rtable.vrhost) will be automatically
+updated by the stub code.
+
+Please verify that you can see packets arriving to your topology when you try
+and ping one of your router interfaces.  To do this, connect to your topology as
+described above and try and ping eth0 (e.g., 171.67.238.32 in this example).
+
+ $ ping 171.67.238.32
+
+ You should see output from sr that looks like:
+
+ *** -> Received packet of length 42
+ *** -> Received packet of length 42
+ *** -> Received packet of length 42
+
+If so, everything is working!  If not, please post your question on piazza.
+
+Good Luck!
