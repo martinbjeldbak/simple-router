@@ -4,9 +4,9 @@ tags
 # Ignore wireshark pcap files
 *.pcap
 
-# Ignore router binary
-sr
 
+# Object files
+*.o
 *.ko
 *.obj
 *.elf
@@ -28,6 +28,7 @@ sr
 *.dylib
 
 # Executables
+sr
 *.exe
 *.out
 *.app
