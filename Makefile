@@ -12,6 +12,7 @@ all : sr
 CC = gcc
 
 OSTYPE = $(shell uname)
+CFLAGS = -g -Wall -ansi -D_DEBUG_ -D_GNU_SOURCE $(ARCH)
 
 ifeq ($(OSTYPE),CYGWIN_NT-5.1)
 ARCH = -D_CYGWIN_
@@ -30,9 +31,9 @@ endif
 ifeq ($(OSTYPE),Darwin)
 ARCH = -D_DARWIN_
 SOCK = -lresolv
+override CFLAGS += -I include -std=gnu99 -m64 -Qunused-arguments
 endif
 
-CFLAGS = -g -Wall -ansi -D_DEBUG_ -D_GNU_SOURCE $(ARCH)
 
 LIBS= $(SOCK) -lm -lpthread
 PFLAGS= -follow-child-processes=yes -cache-dir=/tmp/${USER} 
