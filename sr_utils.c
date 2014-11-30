@@ -183,6 +183,10 @@ void print_hdrs(uint8_t *buf, uint32_t length) {
   }
 }
 
+sr_ethernet_hdr_t *packet_get_eth_hdr(uint8_t *packet) {
+  return (sr_ethernet_hdr_t *)packet;
+}
+
 sr_arp_hdr_t *packet_get_arp_hdr(uint8_t *packet) {
     return (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
 }
