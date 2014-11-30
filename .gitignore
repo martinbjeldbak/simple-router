@@ -4,6 +4,8 @@ tags
 # Ignore wireshark pcap files
 *.pcap
 
+# Ignore Makefile generated files
+.*.d
 
 # Object files
 *.o
