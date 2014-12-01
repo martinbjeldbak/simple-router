@@ -1,7 +1,5 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sr_protocol.h"
 #include "sr_router.h"
 #include "sr_utils.h"
 #include "sr_handle_arp.h"
@@ -19,22 +17,23 @@ struct sr_if* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip) {
       return sr_get_interface(sr, rt->interface);
     rt = rt->next;
   }
-  Debug("sr_ip_to_iface found no interface for given ip");
+  Debug("sr_ip_to_iface found no interface for given ip, returning null");
   return NULL;
 }
 
 void sr_handle_arp(struct sr_instance* sr,
     uint8_t *packet, unsigned int len, char *interface) {
   // Get packet arp header to see what kind of arp we got
+  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
 
   // Get interface of router this arp req was received on
   struct sr_if *iface = sr_get_interface(sr, interface);
 
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
-    sr_handle_arp_req(sr, packet, len, iface);
+    sr_handle_arp_req(sr, eth_hdr, arp_hdr, iface);
   else if(ntohs(arp_hdr->ar_op) == arp_op_reply)
-    sr_handle_arp_rep(sr, packet, len, iface);
+    sr_handle_arp_rep(sr, eth_hdr, arp_hdr, iface);
 }
 
 int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
@@ -43,7 +42,8 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
     bzero(packet, len);
 
     struct sr_ethernet_hdr *eth_hdr = (sr_ethernet_hdr_t *)packet;
-    struct sr_arp_hdr *arp_hdr =  (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+    struct sr_arp_hdr *arp_hdr
+      = (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
 
     // Get the router's interface connected to the target IP
     // we need (using the routing table)
@@ -71,13 +71,13 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
 }
 
 void sr_handle_arp_rep(struct sr_instance* sr,
-    uint8_t *packet, unsigned int len, struct sr_if* iface) {
+    sr_ethernet_hdr_t *eth_hdr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
+
   Debug("Got ARP reply, caching it");
   // Get packet ethernet and ARP headers
-  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
-  sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
 
-  if(eth_hdr->ether_dhost )
+  // Check if it's a reply to us
+
 
   // Cache it
   sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
@@ -88,17 +88,15 @@ void sr_handle_arp_rep(struct sr_instance* sr,
 }
 
 void sr_handle_arp_req(struct sr_instance* sr,
-    uint8_t *packet, unsigned int len, struct sr_if* iface) {
-  sr_ethernet_hdr_t *req_eth_hdr = packet_get_eth_hdr(packet);
-  sr_arp_hdr_t *req_arp_hdr = packet_get_arp_hdr(packet);
+    sr_ethernet_hdr_t *req_eth_hdr, sr_arp_hdr_t *req_arp_hdr, struct sr_if* iface) {
 
   // If the ARP req was for this me, respond with ARP reply
   if(req_arp_hdr->ar_tip == iface->ip) {
     Debug("Request for this router, constructing reply");
 
-    unsigned int new_len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
-    uint8_t *rep_packet = (uint8_t *)malloc(new_len);
-    bzero(rep_packet, new_len);
+    unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
+    uint8_t *rep_packet = (uint8_t *)malloc(len);
+    bzero(rep_packet, len);
 
     // Construct ARP ethernet hdr
     construct_arp_rep_eth_hdr_at(rep_packet, req_eth_hdr, iface);
