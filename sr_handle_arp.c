@@ -30,6 +30,11 @@ void sr_handle_arp(struct sr_instance* sr,
   // Get interface of router this arp req was received on
   struct sr_if *iface = sr_get_interface(sr, interface);
 
+  if(iface == NULL) {
+    Debug("Packet oddly not received on an interface...");
+    return;
+  }
+
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
     sr_handle_arp_req(sr, eth_hdr, arp_hdr, iface);
   else if(ntohs(arp_hdr->ar_op) == arp_op_reply)
@@ -73,14 +78,15 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
 void sr_handle_arp_rep(struct sr_instance* sr,
     sr_ethernet_hdr_t *eth_hdr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
 
-  Debug("Got ARP reply, caching it");
-  // Get packet ethernet and ARP headers
+  // Check if it's a reply to us, not that it really matters...
+  if(arp_hdr->ar_tip == iface->ip) {
+    Debug("Got ARP reply, caching it");
 
-  // Check if it's a reply to us
-
-
-  // Cache it
-  sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
+    // Cache it
+    sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
+  }
+  else
+    Debug("Dropped an ARP reply");
 
   // The discussion slides say to go through request queue and send
   // outstanding packets, but sr_arpcache_sweepreqs already gets called
