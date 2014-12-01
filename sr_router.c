@@ -24,6 +24,7 @@
 #include "sr_arpcache.h"
 #include "sr_utils.h"
 #include "sr_handle_arp.h"
+#include "sr_handle_ip.h"
 
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -91,6 +92,7 @@ void sr_handlepacket(struct sr_instance* sr,
         sr_handle_arp(sr, packet, len, interface);
         break;
       case ethertype_ip:
+        sr_handle_ip(sr, packet, len, interface);
         break;
       default:
         fprintf(stderr, "Packet was neither of type ARP or IP, dropping\n");
