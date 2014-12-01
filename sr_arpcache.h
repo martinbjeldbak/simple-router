@@ -106,6 +106,15 @@ struct sr_arpcache {
     pthread_mutexattr_t attr;
 };
 
+void sr_arpcache_handle_req_sending(struct sr_instance *sr, struct sr_arpreq *req);
+
+/* 
+  This function gets called every second. For each request sent out, we keep
+  checking whether we should resend an request or destroy the arp request.
+  See the comments in the header file for an idea of what it should look like.
+*/
+void sr_arpcache_sweepreqs(struct sr_instance *sr);
+
 /* Checks if an IP->MAC mapping is in the cache. IP is in network byte order. 
    You must free the returned structure if it is not NULL. */
 struct sr_arpentry *sr_arpcache_lookup(struct sr_arpcache *cache, uint32_t ip);

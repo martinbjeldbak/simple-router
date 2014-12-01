@@ -9,6 +9,10 @@ My implementation of the Simple Router assignment in UCSD's CSE 123 Computer Net
 This section includes a description of my implementation at a high level along with a list of requirements.
 
 ### Description
+#### Handling ARPs
+If we notice an ARP request on the wire and its target IP address is our (by our I mean the router's) IP address, then simply construct an ARP reply packet destined to the requester. If the ARP request is not for us, we (the router) do not need to  respond to it.
+
+As stated on page 229 in the book about ARP queries, if we notice any ARP request, we can add it to our ARP cache, since the ARP request contains the requester's MAC and IP addresses. So this is what we do. If it is already added, then the information about the host will be refreshed.
 
 ### Requirements
 - The router must successfully route packets between the Internet and the application servers.
