@@ -28,6 +28,8 @@
 #ifndef SR_UTILS_H
 #define SR_UTILS_H
 
+int chk_ip_chksum(sr_ip_hdr_t *ip_hdr);
+int chk_icmp_cksum(sr_icmp_hdr_t *icmp_hdr);
 uint16_t cksum(const void *_data, int len);
 
 uint16_t ethertype(uint8_t *buf);

@@ -3,6 +3,37 @@
 #include <string.h>
 #include "sr_protocol.h"
 #include "sr_utils.h"
+#include "sr_router.h"
+
+// Returns -1 if unequal, 1 if we're good
+int chk_ip_chksum(sr_ip_hdr_t *ip_hdr) {
+  uint16_t buf = ip_hdr->ip_sum;
+  ip_hdr->ip_sum = 0; // set to 0 so it's not part of computed chksum
+
+  if (cksum(ip_hdr, sizeof(sr_ip_hdr_t)) != buf) {
+    ip_hdr->ip_sum = buf; // reset cheksum as if nothing happened...
+    return -1;
+  }
+  else {
+    ip_hdr->ip_sum = buf; // reset checksum as if nothing happened...
+    return 1;
+  }
+}
+
+// TODO: Doesn't work, not important right now
+int chk_icmp_cksum(sr_icmp_hdr_t *icmp_hdr) {
+  uint16_t buf = icmp_hdr->icmp_sum;
+  icmp_hdr->icmp_sum = 0; // set to 0 so it's not part of computed chksum
+
+  if (cksum(icmp_hdr, sizeof(sr_icmp_hdr_t)) != buf) {
+    icmp_hdr->icmp_sum = buf; // reset cheksum as if nothing happened...
+    return -1;
+  }
+  else {
+    icmp_hdr->icmp_sum = buf; // reset checksum as if nothing happened...
+    return 1;
+  }
+}
 
 uint16_t cksum(const void *_data, int len) {
   const uint8_t *data = _data;

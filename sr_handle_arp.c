@@ -38,9 +38,8 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
     uint8_t *packet = (uint8_t *)malloc(len);
     bzero(packet, len);
 
-    struct sr_ethernet_hdr *eth_hdr = (sr_ethernet_hdr_t *)packet;
-    struct sr_arp_hdr *arp_hdr
-      = (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+    struct sr_ethernet_hdr *eth_hdr = packet_get_eth_hdr(packet);
+    struct sr_arp_hdr *arp_hdr = packet_get_arp_hdr(packet);
 
     // Get the router's interface connected to the target IP
     // we need (using the routing table)
@@ -125,7 +124,7 @@ void sr_handle_arp_req(struct sr_instance* sr,
     //print_hdrs(rep_packet, new_len);
 
     // Put our new packet back on the wire
-    sr_send_packet(sr, (uint8_t *)rep_packet, len, iface->name);
+    sr_send_packet(sr, rep_packet, len, iface->name);
     free(rep_packet);
   }
 

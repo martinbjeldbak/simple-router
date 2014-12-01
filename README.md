@@ -14,9 +14,9 @@ This section includes a description of my implementation at a high level along w
 I have done my best to implement the router exactly as described on the project website along with following the flow chart used in the Project 2 discussion.
 
 #### Modifying packets in flight vs. allocation new packets
-I have chosen to create brand new packets when replying or forwarding, simply because I think it's a little cleaner this way and gives me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea.
+I have chosen to allocate new ARP packets, simply because I was just getting started and thought it'd be a little cleaner this way and that it'd give me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea.
 
-My approach adds some more lines of code, but it explicitly makes me think about each header of each type of packet and what  they contain.
+Alternatively, for the ICMP echo responding code, I had problems with computing the chksum of a new sr_icmp_hdr_t "object". So, I simply swapped the incoming packet's ethernet src/dst, the IP ethernet and IP src/dsts, updated the ICMP type to 0, and finally recomputed the checksum to have it successfully respond to pings. Why this approach works instead of allocating a new ethernet/ip/icmp frame? I honestly cannot say. Maybe because of the ICMP data section...?
 
 
 #### Handling ARPs
