@@ -75,21 +75,40 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
     return res;
 }
 
+/*
+ * ARP reply processing. Based on the pseudocode given in
+ * the header file.
+ */
 void sr_handle_arp_rep(struct sr_instance* sr,
     sr_ethernet_hdr_t *eth_hdr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
 
-  // Check if it's a reply to us, not that it really matters...
-  if(arp_hdr->ar_tip == iface->ip) {
-    Debug("Got ARP reply, caching it");
+  // Check if interface fits for packet and we are the dest
+  if(iface && (arp_hdr->ar_tip == iface->ip)) {
+    Debug("Got ARP reply at interfce %s, caching it", iface->name);
 
     // Cache it
-    sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
+    struct sr_arpreq *req
+      = sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
+
+    //Go through request queue and send outstanding packets
+    if(req) {
+      // Get waiting packets
+      struct sr_packet *waiter = req->packets;
+      // Loop through waiting
+      while(waiter) {
+
+        // TODO: try to send the IP packet
+
+        // Try to go to next waiting packet
+        waiter = waiter->next;
+      }
+      sr_arpreq_destroy(&sr->cache, req);
+    }
   }
   else
-    Debug("Dropped an ARP reply");
+    Debug("Dropped an ARP reply beause it was not receieved at any iface");
 
-  // The discussion slides say to go through request queue and send
-  // outstanding packets, but sr_arpcache_sweepreqs already gets called
+  // The discussion slides say to , but sr_arpcache_sweepreqs already gets called
   // once every second...
 }
 
@@ -114,7 +133,7 @@ void sr_handle_arp_req(struct sr_instance* sr,
     //print_hdrs(rep_packet, new_len);
 
     // Put our new packet back on the wire
-    sr_send_packet(sr, (uint8_t *)rep_packet, new_len, iface->name);
+    sr_send_packet(sr, (uint8_t *)rep_packet, len, iface->name);
     free(rep_packet);
   }
 
