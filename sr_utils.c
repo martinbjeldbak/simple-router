@@ -189,3 +189,11 @@ sr_ethernet_hdr_t *packet_get_eth_hdr(uint8_t *packet) {
 sr_arp_hdr_t *packet_get_arp_hdr(uint8_t *packet) {
     return (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
 }
+
+sr_ip_hdr_t *packet_get_ip_hdr(uint8_t *packet) {
+  return (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+}
+
+sr_icmp_hdr_t *packet_get_icmp_hdr(uint8_t *packet) {
+  return (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+}

@@ -47,5 +47,7 @@ void print_hdrs(uint8_t *buf, uint32_t length);
 
 sr_arp_hdr_t *packet_get_arp_hdr(uint8_t *packet);
 sr_ethernet_hdr_t *packet_get_eth_hdr(uint8_t *packet);
+sr_ip_hdr_t *packet_get_ip_hdr(uint8_t *packet);
+sr_icmp_hdr_t *packet_get_icmp_hdr(uint8_t *packet);
 
 #endif /* -- SR_UTILS_H -- */

@@ -83,8 +83,8 @@ void sr_handlepacket(struct sr_instance* sr,
 
   //printf("*** -> Received packet of length %d \n",len);
 
-  printf("Received packet:\n");
-  print_hdrs(packet, len); printf("\n");
+  //printf("Received packet:\n");
+  //print_hdrs(packet, len); printf("\n");
 
     switch(ethtype) {
       case ethertype_arp:
