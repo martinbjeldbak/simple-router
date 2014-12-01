@@ -11,6 +11,14 @@ I am unfortunately not competing for the Espresso prise.
 This section includes a description of my implementation at a high level along with a list of requirements.
 
 ### Description
+I have done my best to implement the router exactly as described on the project website along with following the flow chart used in the Project 2 discussion.
+
+#### Modifying packets in flight vs. allocation new packets
+I have chosen to create brand new packets when replying or forwarding, simply because I think it's a little cleaner this way and gives me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea.
+
+My approach adds some more lines of code, but it explicitly makes me think about each header of each type of packet and what  they contain.
+
+
 #### Handling ARPs
 If we notice an ARP request on the wire and its target IP address is our (by our I mean the router's) IP address, then simply construct an ARP reply packet destined to the requester. If the ARP request is not for us, we (the router) do not need to  respond to it.
 
