@@ -11,16 +11,16 @@
  Uses the given routing table to find the interface where an IP
  destination resides on
  */
-char* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip) {
+struct sr_if* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip) {
   struct sr_rt *rt = sr->routing_table;
 
   while(rt->next != NULL) {
     if(rt->dest.s_addr == ip)
-      return rt->interface;
+      return sr_get_interface(sr, rt->interface);
     rt = rt->next;
   }
   Debug("sr_ip_to_iface found no interface for given ip");
-  return "";
+  return NULL;
 }
 
 void sr_handle_arp(struct sr_instance* sr,
@@ -47,8 +47,7 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
 
     // Get the router's interface connected to the target IP
     // we need (using the routing table)
-    struct sr_if *iface =
-      sr_get_interface(sr, sr_find_iface_for_ip(sr, tip));
+    struct sr_if *iface = sr_find_iface_for_ip(sr, tip);
 
     // Set ethernet header destination to broadcast MAC address
     memset(eth_hdr->ether_dhost, 0xff, ETHER_ADDR_LEN);

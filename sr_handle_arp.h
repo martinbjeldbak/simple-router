@@ -1,7 +1,7 @@
 #ifndef SR_HANDLE_ARP_H
 #define SR_HANDLE_ARP_H
 
-char* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip);
+struct sr_if* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip);
 
 void sr_handle_arp(struct sr_instance* sr, uint8_t *packet, unsigned int len, char *interface);
 
