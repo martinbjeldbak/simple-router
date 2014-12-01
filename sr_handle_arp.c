@@ -22,18 +22,10 @@ struct sr_if* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip) {
 }
 
 void sr_handle_arp(struct sr_instance* sr,
-    uint8_t *packet, unsigned int len, char *interface) {
+    uint8_t *packet, unsigned int len, struct sr_if *iface) {
   // Get packet arp header to see what kind of arp we got
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
-
-  // Get interface of router this arp req was received on
-  struct sr_if *iface = sr_get_interface(sr, interface);
-
-  if(iface == NULL) {
-    Debug("Packet oddly not received on an interface...");
-    return;
-  }
 
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
     sr_handle_arp_req(sr, eth_hdr, arp_hdr, iface);

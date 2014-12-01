@@ -3,7 +3,7 @@
 #include "sr_rt.h"
 #include "sr_utils.h"
 
-void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, char *interface) {
+void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
   print_hdrs(packet, len);
 
   // Extract ethernet and IP hdrs
