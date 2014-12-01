@@ -7,15 +7,12 @@
 #include "sr_handle_ip.h"
 
 void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
-  printf("PACKET RECEIVED\n");
-  print_hdrs(packet, len);
+  //printf("PACKET RECEIVED\n");
+  //print_hdrs(packet, len);
 
   // Extract ethernet and IP hdrs
-  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
+  //sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
-
-  // Get IP protocol information
-  uint8_t ip_proto = ip_protocol((uint8_t *)ip_hdr);
 
   // Check IP header for checksum corruption
   if(chk_ip_chksum(ip_hdr) == -1) {
@@ -35,7 +32,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
 
 void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
   // Extract ethernet and IP hdrs
-  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
+  //sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
   // Get IP protocol information
