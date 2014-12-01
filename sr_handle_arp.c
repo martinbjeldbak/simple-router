@@ -28,10 +28,13 @@ void sr_handle_arp(struct sr_instance* sr,
   // Get packet arp header to see what kind of arp we got
   sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
 
+  // Get interface of router this arp req was received on
+  struct sr_if *iface = sr_get_interface(sr, interface);
+
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
-    sr_handle_arp_req(sr, packet, len, interface);
+    sr_handle_arp_req(sr, packet, len, iface);
   else if(ntohs(arp_hdr->ar_op) == arp_op_reply)
-    sr_handle_arp_rep(sr, packet, len, interface);
+    sr_handle_arp_rep(sr, packet, len, iface);
 }
 
 int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
@@ -69,17 +72,26 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
 }
 
 void sr_handle_arp_rep(struct sr_instance* sr,
-    uint8_t *packet, unsigned int len, char* interface) {
+    uint8_t *packet, unsigned int len, struct sr_if* iface) {
+  Debug("Got ARP reply, caching it");
+  // Get packet ethernet and ARP headers
+  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
+  sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
+
+  if(eth_hdr->ether_dhost )
+
+  // Cache it
+  sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
+
+  // The discussion slides say to go through request queue and send
+  // outstanding packets, but sr_arpcache_sweepreqs already gets called
+  // once every second...
 }
 
 void sr_handle_arp_req(struct sr_instance* sr,
-    uint8_t *packet, unsigned int len, char* interface) {
+    uint8_t *packet, unsigned int len, struct sr_if* iface) {
   sr_ethernet_hdr_t *req_eth_hdr = packet_get_eth_hdr(packet);
   sr_arp_hdr_t *req_arp_hdr = packet_get_arp_hdr(packet);
-  struct sr_arpentry *entry = sr_arpcache_lookup(&sr->cache, req_arp_hdr->ar_tip);
-
-  // Get interface of router this arp req was received on
-  struct sr_if *iface = sr_get_interface(sr, interface);
 
   // If the ARP req was for this me, respond with ARP reply
   if(req_arp_hdr->ar_tip == iface->ip) {
@@ -99,7 +111,7 @@ void sr_handle_arp_req(struct sr_instance* sr,
     //print_hdrs(rep_packet, new_len);
 
     // Put our new packet back on the wire
-    sr_send_packet(sr, (uint8_t *)rep_packet, new_len, interface);
+    sr_send_packet(sr, (uint8_t *)rep_packet, new_len, iface->name);
     free(rep_packet);
   }
 
