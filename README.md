@@ -26,6 +26,14 @@ As stated on page 229 in the book about ARP queries, if we notice any ARP reques
 
 If we get an ARP reply destined to us, cache the reply and loop through any outstanding packets in the request queue and now try to forward those packets.
 
+#### ICMP requests
+If they're destined to router with type echo request (control message 8) simply send an ICMP echo reply (control message 0) back to the origin after having recomputed the checksum and modified the enclosing ethernet and IP packets.
+
+### Header file changes
+- sr_protocol.h
+    - Added the protocol numbers for TCP (0x0006) and UDP (0x0011) to the sr_ip_protocol enum, used to check whether the router receives either type of packet so it can discard them (as pr. discussion slides).
+    - Added sr_icmp_protocol enum with the ICMP protocol control messages we need to respond with.
+
 ### Requirements
 - The router must successfully route packets between the Internet and the application servers.
 - The router must correctly handle ARP requests and replies.
