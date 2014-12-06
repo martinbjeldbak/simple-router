@@ -14,7 +14,7 @@ This section includes a description of my implementation at a high level along w
 I have done my best to implement the router exactly as described on the project website along with following the flow chart used in the Project 2 discussion.
 
 #### Modifying packets in flight vs. allocation new packets
-I have chosen to allocate new ARP packets, simply because I was just getting started and thought it'd be a little cleaner this way and that it'd give me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea.
+When creating new ARP packets (responding to requests), I have chosen to allocate new ARP packets, simply because I was just getting started and thought it'd be a little cleaner this way and that it'd give me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea.
 
 Alternatively, for the ICMP echo responding code, I had problems with computing the chksum of a new sr_icmp_hdr_t "object". So, I simply swapped the incoming packet's ethernet src/dst, the IP ethernet and IP src/dsts, updated the ICMP type to 0, and finally recomputed the checksum to have it successfully respond to pings. Why this approach works instead of allocating a new ethernet/ip/icmp frame? I honestly cannot say. Maybe because of the ICMP data section...?
 
@@ -26,7 +26,10 @@ As stated on page 229 in the book about ARP queries, if we notice any ARP reques
 
 If we get an ARP reply destined to us, cache the reply and loop through any outstanding packets in the request queue and now try to forward those packets.
 
-#### ICMP requests
+#### TCP/UDP packets
+If they're destined to the router, a ICMP t3 packet is constructed and returned (took me forever to figure out *not* to use the sr_icmp_hdr structure) to the sender with type destination unreachable (3) and code port unreachable (3). All of this was found in the Wikipedia article on ICMPv4 packets [here](http://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Destination_unreachable). This is also where I finally figured out that you need to include the "rest of header" (in our case, the IP header and first 8 bytes of data from packet we ignored) information when responding with destination unreachable.
+
+#### ICMP packets
 If they're destined to router with type echo request (control message 8) simply send an ICMP echo reply (control message 0) back to the origin after having recomputed the checksum and modified the enclosing ethernet and IP packets.
 
 ### Header file changes

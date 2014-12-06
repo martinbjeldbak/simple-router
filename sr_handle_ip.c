@@ -20,7 +20,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
     return;
   }
 
-  // Check if we are receiver
+  // If we are the receiver
   if(iface->ip == ip_hdr->ip_dst) {
     sr_handle_ip_rec(sr, packet, len, iface);
   }
@@ -39,14 +39,13 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
   // Get IP protocol information
   uint8_t ip_proto = ip_hdr->ip_p;
 
-
   switch(ip_proto) {
     // If packet is a TCP or UDP packet...
     case ip_protocol_tcp:
     case ip_protocol_udp:
       Debug("TCP/UDP request received, sending port unreachable\n");
       // Send ICMP port unreachable
-      sr_send_icmp_to(sr, packet, icmp_protocol_type_dest_unreach,
+      sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
           icmp_protocol_code_port_unreach, iface);
       break;
     // If it is an ICMP packet...
@@ -76,7 +75,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
 
 // Sends an ICMP error message from sr out of interface iface
 // to receiver noted in the uint8_t receiver IP packet.
-int sr_send_icmp_to(struct sr_instance *sr, uint8_t *receiver,
+int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
     uint8_t icmp_type, uint8_t icmp_code, struct sr_if *iface) {
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) +
@@ -140,9 +139,7 @@ int sr_modify_and_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t i
   icmp_hdr->icmp_code = icmp_code;
   icmp_hdr->icmp_sum = cksum(icmp_hdr,
       sizeof(sr_icmp_hdr_t)); // cksum of ICMP
-  //Debug("Sending ICMP echo reply packet of len: %d\n", len);
   int res = sr_send_packet(sr, packet, len, iface->name);
-  //print_hdr_icmp((uint8_t *)icmp_hdr);
 
   return res;
 }
