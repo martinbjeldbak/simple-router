@@ -90,19 +90,20 @@ void sr_handlepacket(struct sr_instance* sr,
     Debug("Packet oddly not received on an interface...");
     return;
   }
+
   //printf("Received packet:\n");
   //print_hdrs(packet, len); printf("\n");
 
-    switch(ethtype) {
-      case ethertype_arp:
-        // Send the packet down to ARP handling code
-        sr_handle_arp(sr, packet, len, iface);
-        break;
-      case ethertype_ip:
-        sr_handle_ip(sr, packet, len, iface);
-        break;
-      default:
-        fprintf(stderr, "Packet was neither of type ARP or IP, dropping\n");
-        return;
-    }
+  switch(ethtype) {
+    case ethertype_arp:
+      // Send the packet down to ARP handling code
+      sr_handle_arp(sr, packet, len, iface);
+      break;
+    case ethertype_ip:
+      sr_handle_ip(sr, packet, len, iface);
+      break;
+    default:
+      fprintf(stderr, "Packet was neither of type ARP or IP, dropping\n");
+      return;
+  }
 }/* end sr_ForwardPacket */

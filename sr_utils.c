@@ -228,3 +228,8 @@ sr_ip_hdr_t *packet_get_ip_hdr(uint8_t *packet) {
 sr_icmp_hdr_t *packet_get_icmp_hdr(uint8_t *packet) {
   return (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 }
+
+sr_icmp_t3_hdr_t *packet_get_icmp_t3_hdr(uint8_t *packet) {
+  // exact same as above function...
+  return (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+}
