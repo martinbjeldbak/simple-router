@@ -1,5 +1,5 @@
 # Simple Router
-My implementation of the Simple Router assignment in UCSD's CSE 123 Computer Networks course in Fall of 2014.
+My implementation of the Simple Router assignment in UCSD's CSE 123 Computer Networks course in Fall of 2014, based off of the assignment at [mininet/mininet](https://github.com/mininet/mininet).
 
 - Name: Martin Bjeldbak Madsen
 - PID: U06616356
@@ -13,28 +13,29 @@ This section includes a description of my implementation at a high level along w
 ### Description
 I have done my best to implement the router exactly as described on the project website along with following the flow chart used in the Project 2 discussion.
 
-#### Modifying packets in flight vs. allocation new packets
+### Modifying packets in flight vs. allocation new packets
 When creating new ARP (responding to requests) and ICMP packets, I have chosen to allocate new packets, simply because I somehow feel this way is a little cleaner, and that it'd also give me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea. During development I tried both approaches, but found allocating new packets each time to be the most general solution, saving me a few functions.
 
-#### Handling ARPs
+### Handling ARPs
 If we notice an ARP request on the wire and its target IP address is our (by our I mean the router's) IP address, then simply construct an ARP reply packet destined to the requester. If the ARP request is not for us, we (the router) do not need to  respond to it.
 
 As stated on page 229 in the book about ARP queries, if we notice any ARP request, we can add it to our ARP cache, since the ARP request contains the requester's MAC and IP addresses. So this is what we do. If it is already added, then the information about the host will be refreshed.
 
 If we get an ARP reply destined to us, cache the reply and loop through any outstanding packets in the request queue and now try to forward those packets.
 
-#### TCP/UDP packets
+### TCP/UDP packets
 If they're destined to the router, a ICMP t3 packet is constructed and returned (took me forever to figure out *not* to use the sr_icmp_hdr structure) to the sender with type destination unreachable (3) and code port unreachable (3). All of this was found in the Wikipedia article on ICMPv4 packets [here](http://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Destination_unreachable). This is also where I finally figured out that you need to include the "rest of header" (in our case, the IP header and first 8 bytes of data from packet we ignored) information when responding with destination unreachable.
 
-#### ICMP packets
+### ICMP packets
 If they're destined to router with type echo request (control message 8) simply send an ICMP echo reply (control message 0) back to the origin after having recomputed the checksum and modified the enclosing ethernet and IP packets.
 
 ### Header file changes
+I started updating this section a week or two after implementing, so this list may not be complete. I plan to do diffs on the header files to find functions and enums I've added to ease development.
 - sr_protocol.h
     - Added the protocol numbers for TCP (0x0006) and UDP (0x0011) to the sr_ip_protocol enum, used to check whether the router receives either type of packet so it can discard them (as pr. discussion slides).
     - Added sr_icmp_protocol enum with the ICMP protocol control messages we need to respond with.
 
-### Requirements
+## Requirements
 - The router must successfully route packets between the Internet and the application servers.
 - The router must correctly handle ARP requests and replies.
 - The router must correctly handle traceroutes through it (where it is not the end host) and to it (where it is the end host).
