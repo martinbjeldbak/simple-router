@@ -45,7 +45,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
     case ip_protocol_udp:
       Debug("TCP/UDP request received, sending port unreachable\n");
       // Send ICMP port unreachable
-      sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
+      sr_send_icmp_to(sr, packet, icmp_protocol_type_dest_unreach,
           icmp_protocol_code_port_unreach, iface);
       break;
     // If it is an ICMP packet...
@@ -63,9 +63,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
           icmp_hdr->icmp_code == icmp_protocol_code_empty) {
         Debug("Got an echo (ping) request, responding with reply\n");
         // Send ICMP echo reply
-        //sr_modify_and_send_icmp(sr, icmp_protocol_type_echo_rep,
-        //    icmp_protocol_type_echo_rep, packet, len, iface);
-        sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_echo_rep,
+        sr_send_icmp_to(sr, packet, icmp_protocol_type_echo_rep,
             icmp_protocol_type_echo_rep, iface);
       }
       break;
@@ -77,7 +75,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
 
 // Sends an ICMP error message from sr out of interface iface
 // to receiver noted in the uint8_t receiver IP packet.
-int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
+int sr_send_icmp_to(struct sr_instance *sr, uint8_t *receiver,
     uint8_t icmp_type, uint8_t icmp_code, struct sr_if *iface) {
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) +

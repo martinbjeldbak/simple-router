@@ -14,10 +14,7 @@ This section includes a description of my implementation at a high level along w
 I have done my best to implement the router exactly as described on the project website along with following the flow chart used in the Project 2 discussion.
 
 #### Modifying packets in flight vs. allocation new packets
-When creating new ARP packets (responding to requests), I have chosen to allocate new ARP packets, simply because I was just getting started and thought it'd be a little cleaner this way and that it'd give me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea.
-
-Alternatively, for the ICMP echo responding code, I had problems with computing the chksum of a new sr_icmp_hdr_t "object". So, I simply swapped the incoming packet's ethernet src/dst, the IP ethernet and IP src/dsts, updated the ICMP type to 0, and finally recomputed the checksum to have it successfully respond to pings. Why this approach works instead of allocating a new ethernet/ip/icmp frame? I honestly cannot say. Maybe because of the ICMP data section...?
-
+When creating new ARP (responding to requests) and ICMP packets, I have chosen to allocate new packets, simply because I somehow feel this way is a little cleaner, and that it'd also give me more explicit control over what goes where. This is obviously not the faster variant, as modifying the data structures in flight before sending them out is probably be the best idea. During development I tried both approaches, but found allocating new packets each time to be the most general solution, saving me a few functions.
 
 #### Handling ARPs
 If we notice an ARP request on the wire and its target IP address is our (by our I mean the router's) IP address, then simply construct an ARP reply packet destined to the requester. If the ARP request is not for us, we (the router) do not need to  respond to it.
