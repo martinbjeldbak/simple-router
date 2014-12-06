@@ -107,7 +107,6 @@ int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
   ip_hdr->ip_src = iface->ip;
   ip_hdr->ip_dst = rec_ip_hdr->ip_src;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-  ip_hdr->ip_sum = 0;
   ip_hdr->ip_sum = cksum((const void *)ip_hdr,
       sizeof(sr_ip_hdr_t));
 
