@@ -25,6 +25,9 @@ As stated on page 229 in the book about ARP queries, if we notice any ARP reques
 
 If we get an ARP reply destined to us, cache the reply and loop through any outstanding packets in the request queue and now try to forward those packets.
 
+### Forwarding logic
+If we receive a packet that we need to forward, first I decrement the TTL and check to see if it becomes zero. If so, we don't have to spend our time on it and can send an ICMP error: time exceeded (11) back to the sender.
+
 ### TCP/UDP packets
 If they're destined to the router, a ICMP t3 packet is constructed and returned (took me forever to figure out *not* to use the sr_icmp_hdr structure) to the sender with type destination unreachable (3) and code port unreachable (3). All of this was found in the Wikipedia article on ICMPv4 packets [here](http://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Destination_unreachable). This is also where I finally figured out that you need to include the "rest of header" (in our case, the IP header and first 8 bytes of data from packet we ignored) information when responding with destination unreachable.
 
@@ -35,7 +38,7 @@ If they're destined to router with type echo request (control message 8) simply 
 I started updating this section a week or two after implementing, so this list may not be complete. I plan to do diffs on the header files to find functions and enums I've added to ease development.
 - sr_protocol.h
     - Added the protocol numbers for TCP (0x0006) and UDP (0x0011) to the sr_ip_protocol enum, used to check whether the router receives either type of packet so it can discard them (as pr. discussion slides).
-    - Added sr_icmp_protocol enum with the ICMP protocol control messages we need to respond with.
+    - Added sr_icmp_type_protocol and sr_icmp_code_protocol enums with the ICMP protocol control messages we need to respond with.
 
 ## Requirements
 - The router must successfully route packets between the Internet and the application servers.

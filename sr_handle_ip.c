@@ -26,7 +26,20 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
   }
   // Not for me, do IP forwarding
   else {
-    // TODO: Before forwarding, check TTL
+    Debug("Got a packet not destined to the router: ");
+    // Decrement TTL
+    ip_hdr->ip_ttl--;
+
+    // If TTL now 0, drop and let receiver know
+    if(ip_hdr->ip_ttl == 0) {
+      Debug("Decremented a packet to TTL of 0, dropping and sending TTL expired\n");
+      sr_send_icmp_t3_to(sr, packet,
+          icmp_protocol_type_time_exceed,
+          icmp_protocol_code_ttl_expired,
+          iface);
+    }
+
+    // Do LPM on routing table
   }
 }
 
