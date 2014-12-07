@@ -6,7 +6,7 @@
 #include "sr_utils.h"
 #include "sr_handle_ip.h"
 
-void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
+void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len) {
   // Extract and IP hdr
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
@@ -16,28 +16,34 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
     return;
   }
 
-  // If we are the receiver
-  if(iface->ip == ip_hdr->ip_dst) {
-    Debug("Got a packet destined for the router\n");
-    sr_handle_ip_rec(sr, packet, len);
-  }
-  // Not for me, do IP forwarding
-  else {
-    Debug("Got a packet not destined to the router\n");
-    // Decrement TTL
-    ip_hdr->ip_ttl--;
+  struct sr_if *iface = sr->if_list;
 
-    // If TTL now 0, drop and let receiver know
-    if(ip_hdr->ip_ttl == 0) {
-      Debug("\tDecremented a packet to TTL of 0, dropping and sending TTL expired ICMP\n");
-      sr_send_icmp_t3_to(sr, packet,
-          icmp_protocol_type_time_exceed,
-          icmp_protocol_code_ttl_expired);
+  // Loop through all interfaces to see if it matches one
+  while(iface) {
+    // If we are the receiver
+    if(iface->ip == ip_hdr->ip_dst) {
+      Debug("Got a packet destined for the router\n");
+      sr_handle_ip_rec(sr, packet, len, iface);
+      return;
     }
-
-    // Now do the forwarding for this packet
-    sr_do_forwarding(sr, packet, len);
+    iface = iface->next;
   }
+
+  // Not for me, do IP forwarding
+  Debug("Got a packet not destined to the router, forwarding it\n");
+  // Decrement TTL
+  ip_hdr->ip_ttl--;
+
+  // If TTL now 0, drop and let receiver know
+  if(ip_hdr->ip_ttl == 0) {
+    Debug("\tDecremented a packet to TTL of 0, dropping and sending TTL expired ICMP\n");
+    sr_send_icmp_t3_to(sr, packet,
+        icmp_protocol_type_time_exceed,
+        icmp_protocol_code_ttl_expired);
+  }
+
+  // Now do the forwarding for this packet
+  sr_do_forwarding(sr, packet, len);
 }
 
 /*
@@ -79,7 +85,7 @@ void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet, unsigned int len)
   }
 }
 
-void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len) {
+void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
   Debug("Got IP packet:\n");
 
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
@@ -109,10 +115,12 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len)
       //}
       if(icmp_hdr->icmp_type == icmp_protocol_type_echo_req &&
           icmp_hdr->icmp_code == icmp_protocol_code_empty) {
-        Debug("\tGot an echo (ping) request, responding with reply\n");
+        Debug("\tIt's an echo (ping) request, responding with reply\n");
+        sr_print_if(iface);
+
         // Send ICMP echo reply
         sr_modify_and_send_icmp(sr, icmp_protocol_type_echo_rep,
-            icmp_protocol_type_echo_rep, packet, len);
+            icmp_protocol_type_echo_rep, packet, len, iface);
       }
       break;
     default:
@@ -121,26 +129,26 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len)
   }
 }
 
-int sr_modify_and_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len) {
+int sr_modify_and_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if * rec_if) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
   sr_icmp_hdr_t *icmp_hdr = packet_get_icmp_hdr(packet);
 
-  // Get interface we should be sending the packet on
-  struct sr_if *iface = sr_iface_for_dst(sr, ip_hdr->ip_src);
+  // Get interface we should be sending the packet out on
+  struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_src);
 
   memcpy(eth_hdr->ether_dhost, eth_hdr->ether_shost, ETHER_ADDR_LEN);
-  memcpy(eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
+  memcpy(eth_hdr->ether_shost, out_if->addr, ETHER_ADDR_LEN);
 
   uint32_t req_src = ip_hdr->ip_src;
-  ip_hdr->ip_src = iface->ip; // src is this interface's ip
+  ip_hdr->ip_src = rec_if->ip; // src is this interface's ip
   ip_hdr->ip_dst = req_src; // dst is requester's ip
 
   icmp_hdr->icmp_type = icmp_type;
   icmp_hdr->icmp_code = icmp_code;
   icmp_hdr->icmp_sum = cksum(icmp_hdr,
       sizeof(sr_icmp_hdr_t)); // cksum of ICMP
-  int res = sr_send_packet(sr, packet, len, iface->name);
 
+  int res = sr_send_packet(sr, packet, len, out_if->name);
   return res;
 }
