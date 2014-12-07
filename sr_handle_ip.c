@@ -16,7 +16,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
 
   // Check IP header for checksum corruption
   if(chk_ip_chksum(ip_hdr) == -1) {
-    Debug("Computed checksum IP is not same as given. Dropping packet");
+    Debug("Computed checksum IP is not same as given. Dropping packet\n");
     return;
   }
 
@@ -29,6 +29,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
     Debug("Got a packet not destined to the router: ");
     // Decrement TTL
     ip_hdr->ip_ttl--;
+    // TODO: Do I recompute the checksum now that it's decremented?
 
     // If TTL now 0, drop and let receiver know
     if(ip_hdr->ip_ttl == 0) {
@@ -39,7 +40,15 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
           iface);
     }
 
-    // Do LPM on routing table
+    // Get interface we need to send this packet out on
+    struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_dst);
+
+    if(out_if) {
+    }
+    else {
+    }
+
+    //sr_print_routing_entry(out_rt);
   }
 }
 

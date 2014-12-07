@@ -53,4 +53,8 @@ sr_ip_hdr_t *packet_get_ip_hdr(uint8_t *packet);
 sr_icmp_hdr_t *packet_get_icmp_hdr(uint8_t *packet);
 sr_icmp_t3_hdr_t *packet_get_icmp_t3_hdr(uint8_t *packet);
 
+char *uint_to_binary(uint32_t ip, int len);
+int match_from_lhs(char *s1, int len_s1, char *s2, int len_s2);
+struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst);
+
 #endif /* -- SR_UTILS_H -- */

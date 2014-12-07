@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "sr_rt.h"
 #include "sr_protocol.h"
-#include "sr_utils.h"
 #include "sr_router.h"
+#include "sr_utils.h"
 
 // Returns -1 if unequal, 1 if we're good
 int chk_ip_chksum(sr_ip_hdr_t *ip_hdr) {
@@ -20,7 +21,6 @@ int chk_ip_chksum(sr_ip_hdr_t *ip_hdr) {
   }
 }
 
-// TODO: Doesn't work, not important right now
 int chk_icmp_cksum(sr_icmp_hdr_t *icmp_hdr) {
   uint16_t buf = icmp_hdr->icmp_sum;
   icmp_hdr->icmp_sum = 0; // set to 0 so it's not part of computed chksum
@@ -232,4 +232,23 @@ sr_icmp_hdr_t *packet_get_icmp_hdr(uint8_t *packet) {
 sr_icmp_t3_hdr_t *packet_get_icmp_t3_hdr(uint8_t *packet) {
   // exact same as above function...
   return (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+}
+
+/*
+ * Implementation of algorithm on page 222 in book,
+ * don't need to use LPM when we have a routing table.
+*/
+struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst) {
+  struct sr_rt* cur_rt_entry = sr->routing_table; // current entry we're looking at
+
+  while(cur_rt_entry) {
+    uint32_t d1 = cur_rt_entry->mask.s_addr & dst;
+
+    if(d1 == cur_rt_entry->dest.s_addr)
+      return sr_get_interface(sr, cur_rt_entry->interface);
+
+    cur_rt_entry = cur_rt_entry->next;
+  }
+  // We don't have default entry, so just return null
+  return NULL;
 }
