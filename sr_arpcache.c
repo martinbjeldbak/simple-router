@@ -10,7 +10,6 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
-#include "sr_handle_arp.h"
 #include "sr_utils.h"
 
 /*
@@ -22,16 +21,23 @@ void sr_arpcache_handle_req_sending(struct sr_instance *sr, struct sr_arpreq *re
 
   if(difftime(now, req->sent) > 1.0) {
     Debug("\t\tARP req still pending, finding out whether to drop or send again\n");
+
     if(req->times_sent >= 5) {
-      Debug("Dropping ARP request and sending ICMP host unreachable\n");
-      /*
-         send icmp host unreachable to source addr of all pkts waiting
-         on this request
-       */
+      Debug("Dropping ARP request and sending ICMP host unreachable\
+          to all waiting hosts\n");
+
+      struct sr_packet *cur_req_packet = req->packets;
+
+      while(cur_req_packet) {
+        sr_send_icmp_t3_to(sr, cur_req_packet->buf,
+            icmp_protocol_type_dest_unreach, icmp_protocol_code_host_unreach);
+        
+        cur_req_packet = cur_req_packet->next;
+      }
       sr_arpreq_destroy(&sr->cache, req);
     }
     else {
-      sr_send_arp_req(sr, req->ip, sr_get_interface(sr, req->packets->iface));
+      sr_send_arp_req(sr, req->ip);
       req->sent = time(NULL);
       req->times_sent++;
     }
