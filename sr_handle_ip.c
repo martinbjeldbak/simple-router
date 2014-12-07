@@ -7,9 +7,6 @@
 #include "sr_handle_ip.h"
 
 void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
-  //printf("PACKET RECEIVED\n");
-  //print_hdrs(packet, len);
-
   // Extract ethernet and IP hdrs
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
@@ -37,43 +34,51 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
           dropping and sending TTL expired ICMP\n");
       sr_send_icmp_t3_to(sr, packet,
           icmp_protocol_type_time_exceed,
-          icmp_protocol_code_ttl_expired,
-          iface);
+          icmp_protocol_code_ttl_expired);
     }
 
-    // Get interface we need to send this packet out on
-    struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_dst);
-
-    // See if we have a matching interface to forward the packet to
-    if(out_if) {
-      struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache,
-          ip_hdr->ip_dst);
-      if(arp_entry) {
-        Debug("Using next_hop_ip->mac mapping in entry to send the packet\n");
-
-        free(arp_entry);
-        forward_packet(sr, packet, len, arp_entry->mac, out_if);
-        return;
-      }
-      else {
-        Debug("\tNo entry found for receiver IP, queing packet \
-            and sending ARP req\n");
-        struct sr_arpreq *req = sr_arpcache_queuereq(&sr->cache, 
-            ip_hdr->ip_dst, packet, len, out_if->name);
-
-        sr_arpcache_handle_req_sending(sr, req);
-        return;
-      }
-    }
-    else {
-      // Don't know where to forward this, ICMP error send net unreachable
-      Debug("\tGo home, you're drunk! I don't have an interface for that!\n");
-      sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
-          icmp_protocol_code_net_unreach, iface);
-    }
+    // Now do the forwarding for this packet
+    sr_do_forwarding(sr, packet, len, iface);
   }
 }
 
+/*
+ * Finds the interface to forward this packet on, sending an ICMP error message
+ * to the sender if we're unable to find the IP in the routing table
+ * */
+void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet, unsigned int len) {
+  // Get interface we need to send this packet out on
+  sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
+  struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_dst);
+
+  // See if we have a matching interface to forward the packet to
+  if(out_if) {
+    struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache,
+        ip_hdr->ip_dst);
+    if(arp_entry) {
+      Debug("Using next_hop_ip->mac mapping in entry to send the packet\n");
+
+      free(arp_entry);
+      forward_packet(sr, packet, len, arp_entry->mac, out_if);
+      return;
+    }
+    else {
+      Debug("\tNo entry found for receiver IP, queing packet \
+          and sending ARP req\n");
+      struct sr_arpreq *req = sr_arpcache_queuereq(&sr->cache, 
+          ip_hdr->ip_dst, packet, len, out_if->name);
+
+      sr_arpcache_handle_req_sending(sr, req);
+      return;
+    }
+  }
+  else {
+    // Don't know where to forward this, ICMP error send net unreachable
+    Debug("\tGo home, you're drunk! I don't have an interface for that!\n");
+    sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
+        icmp_protocol_code_net_unreach);
+  }
+}
 
 void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
   Debug("Got IP packet:\n");
@@ -90,7 +95,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
       Debug("\tTCP/UDP request received, sending port unreachable\n");
       // Send ICMP port unreachable
       sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
-          icmp_protocol_code_port_unreach, iface);
+          icmp_protocol_code_port_unreach);
       break;
     // If it is an ICMP packet...
     case ip_protocol_icmp: ;
@@ -120,7 +125,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
 // Sends an ICMP error message from sr out of interface iface
 // to receiver noted in the uint8_t receiver IP packet.
 int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
-    uint8_t icmp_type, uint8_t icmp_code, struct sr_if *iface) {
+    uint8_t icmp_type, uint8_t icmp_code) {
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) +
     sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
@@ -135,6 +140,9 @@ int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
   // Get original sender (our receiver) header infos
   sr_ethernet_hdr_t *rec_eth_hdr = packet_get_eth_hdr(receiver);
   sr_ip_hdr_t *rec_ip_hdr = packet_get_ip_hdr(receiver);
+
+  // Get interface we should be sending the packet on
+  struct sr_if *iface = sr_iface_for_dst(sr, rec_ip_hdr->ip_src);
 
   // Construct ethernet hdr
   memcpy(eth_hdr->ether_dhost, rec_eth_hdr->ether_shost, ETHER_ADDR_LEN);
