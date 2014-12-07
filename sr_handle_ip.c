@@ -121,7 +121,6 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len)
   }
 }
 
-
 int sr_modify_and_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);

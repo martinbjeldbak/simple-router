@@ -12,7 +12,7 @@ all : sr
 CC = gcc
 
 OSTYPE = $(shell uname)
-CFLAGS = -g -Wall -ansi -D_DEBUG_ -D_GNU_SOURCE $(ARCH)
+CFLAGS = -g -Wall -std=c99 -D_DEBUG_ -D_GNU_SOURCE $(ARCH)
 
 ifeq ($(OSTYPE),CYGWIN_NT-5.1)
 ARCH = -D_CYGWIN_
