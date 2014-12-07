@@ -29,8 +29,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
 
     // If TTL now 0, drop and let receiver know
     if(ip_hdr->ip_ttl == 0) {
-      Debug("\tDecremented a packet to TTL of 0, \
-          dropping and sending TTL expired ICMP\n");
+      Debug("\tDecremented a packet to TTL of 0, dropping and sending TTL expired ICMP\n");
       sr_send_icmp_t3_to(sr, packet,
           icmp_protocol_type_time_exceed,
           icmp_protocol_code_ttl_expired);

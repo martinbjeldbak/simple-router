@@ -25,15 +25,15 @@ void sr_handle_arp(struct sr_instance* sr,
  */
 void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
 
-  // Check if interface fits for packet and we are the dest
-  if(iface && (arp_hdr->ar_tip == iface->ip)) {
+  // Check if we are destination of ARP reply
+  if(arp_hdr->ar_tip == iface->ip) {
     Debug("\tGot ARP reply at interfce %s, caching it\n", iface->name);
 
     // Cache it
-    struct sr_arpreq *req
-      = sr_arpcache_insert(&sr->cache, arp_hdr->ar_sha, arp_hdr->ar_sip);
+    struct sr_arpreq *req = sr_arpcache_insert(&sr->cache,
+        arp_hdr->ar_sha, arp_hdr->ar_sip);
 
-    //Go through request queue and send outstanding packets
+    // Go through request queue and send packets waiting on this reply
     if(req) {
       // Get waiting packets
       struct sr_packet *waiter = req->packets;
@@ -43,14 +43,12 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_
         Debug("Forwarding packet that has been waiting for ARP reply\n");
         sr_forward_packet(sr, waiter->buf, waiter->len, arp_hdr->ar_sha, iface);
 
-        // Try to go to next waiting packet
-        waiter = waiter->next;
+        waiter = waiter->next; // try to go to next waiting packet
       }
+      // Drop the request from oustanding queue since it is now forwarded
       sr_arpreq_destroy(&sr->cache, req);
     }
   }
-  else
-    Debug("\tDropped an ARP reply beause it was not receieved at any iface\n");
 }
 
 /*
