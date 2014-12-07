@@ -112,31 +112,3 @@ void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr,
     rep_arp_hdr->ar_tip = arp_hdr->ar_sip;
 }
 
-int sr_send_arp_req(struct sr_instance *sr, uint32_t tip, struct sr_if *iface) {
-    unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
-    uint8_t *packet = (uint8_t *)malloc(len);
-    bzero(packet, len);
-
-    struct sr_ethernet_hdr *eth_hdr = packet_get_eth_hdr(packet);
-    struct sr_arp_hdr *arp_hdr = packet_get_arp_hdr(packet);
-
-    // Set ethernet header destination to broadcast MAC address
-    memset(eth_hdr->ether_dhost, 0xff, ETHER_ADDR_LEN);
-    // Set ethernet source to be the router's interface's MAC
-    memcpy(eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
-    eth_hdr->ether_type = htons(ethertype_arp);
-
-    arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
-    arp_hdr->ar_pro = htons(ethertype_ip);
-    arp_hdr->ar_hln = ETHER_ADDR_LEN;
-    arp_hdr->ar_pln = 4;
-    arp_hdr->ar_op = htons(arp_op_request);
-    memcpy(arp_hdr->ar_sha, iface->addr, ETHER_ADDR_LEN);
-    arp_hdr->ar_sip = iface->ip;
-    memset(arp_hdr->ar_tha, 0xff, ETHER_ADDR_LEN);
-    arp_hdr->ar_tip = tip;
-
-    int res = sr_send_packet(sr, packet, len, iface->name);
-    free(packet);
-    return res;
-}
