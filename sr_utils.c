@@ -254,7 +254,7 @@ struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst) {
   return NULL;
 }
 
-void forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_if) {
+void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_if) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 

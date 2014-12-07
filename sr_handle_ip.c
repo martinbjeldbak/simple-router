@@ -59,7 +59,7 @@ void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet, unsigned int len)
       Debug("Using next_hop_ip->mac mapping in entry to send the packet\n");
 
       free(arp_entry);
-      forward_packet(sr, packet, len, arp_entry->mac, out_if);
+      sr_forward_packet(sr, packet, len, arp_entry->mac, out_if);
       return;
     }
     else {

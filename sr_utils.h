@@ -56,6 +56,6 @@ sr_icmp_t3_hdr_t *packet_get_icmp_t3_hdr(uint8_t *packet);
 char *uint_to_binary(uint32_t ip, int len);
 int match_from_lhs(char *s1, int len_s1, char *s2, int len_s2);
 struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst);
-void forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_if);
+void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_if);
 
 #endif /* -- SR_UTILS_H -- */

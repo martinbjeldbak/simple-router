@@ -41,7 +41,7 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_
       while(waiter) {
 
         Debug("Forwarding packet that has been waiting for ARP reply\n");
-        forward_packet(sr, waiter->buf, waiter->len, arp_hdr->ar_sha, iface);
+        sr_forward_packet(sr, waiter->buf, waiter->len, arp_hdr->ar_sha, iface);
 
         // Try to go to next waiting packet
         waiter = waiter->next;
@@ -51,11 +51,12 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_
   }
   else
     Debug("\tDropped an ARP reply beause it was not receieved at any iface\n");
-
-  // The discussion slides say to , but sr_arpcache_sweepreqs already gets called
-  // once every second...
 }
 
+/*
+ * ARP request processing. If we get a request, respond to it. Cache
+ * it regardless of it was to us or not.
+ */
 void sr_handle_arp_req(struct sr_instance* sr,
     sr_ethernet_hdr_t *req_eth_hdr, sr_arp_hdr_t *req_arp_hdr, struct sr_if* iface) {
 
@@ -73,8 +74,6 @@ void sr_handle_arp_req(struct sr_instance* sr,
     // Construct ARP hdr
     construct_arp_rep_hdr_at(rep_packet + sizeof(sr_ethernet_hdr_t),
         req_arp_hdr, iface);
-
-    //print_hdrs(rep_packet, new_len);
 
     // Put our new packet back on the wire
     sr_send_packet(sr, rep_packet, len, iface->name);
