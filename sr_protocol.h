@@ -159,6 +159,7 @@ enum sr_icmp_protocol_code {
   icmp_protocol_code_empty = 0x0,
   icmp_protocol_code_port_unreach = 0x003,
   icmp_protocol_code_ttl_expired = 0x0,
+  icmp_protocol_code_net_unreach = 0x0,
 };
 
 enum sr_ip_protocol {

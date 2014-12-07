@@ -241,14 +241,16 @@ sr_icmp_t3_hdr_t *packet_get_icmp_t3_hdr(uint8_t *packet) {
 struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst) {
   struct sr_rt* cur_rt_entry = sr->routing_table; // current entry we're looking at
 
+  // Loop through each entry in the routing table
   while(cur_rt_entry) {
     uint32_t d1 = cur_rt_entry->mask.s_addr & dst;
 
     if(d1 == cur_rt_entry->dest.s_addr)
-      return sr_get_interface(sr, cur_rt_entry->interface);
+       return sr_get_interface(sr, cur_rt_entry->interface);
 
     cur_rt_entry = cur_rt_entry->next;
   }
   // We don't have default entry, so just return null
   return NULL;
 }
+

@@ -28,7 +28,16 @@ If we get an ARP reply destined to us, cache the reply and loop through any outs
 ### Forwarding logic
 If we receive a packet that we need to forward, first I decrement the TTL and check to see if it becomes zero. If so, we don't have to spend our time on it and can send an ICMP error: time exceeded (11) back to the sender.
 
-Otherwise, we continue the lookup process, now needing to figure out which interface to send the packet out on. Thankfully, we can use the preconfigured routing/forwarding table for this. The process is described on page 223 of the third edition of Computer Systems: A Networking Approach. Basically, we can find the next hop by looping through each entry in the routing table to bitwise AND each entry's subnet mask with the destination IP address. If this result is the same as the subnet number (the destination in our routing table), then we have found the matching interface we need to forward this packet to. In our sample routing table, there was no need for this since the mask is 255.255.255.255 and all the destinations equals each host, but it still might be benefital to implement this functionality, since who knows what other routing tables we may be tested on.
+Otherwise, we continue the lookup process, now needing to figure out which interface to send the packet out on. Thankfully, we can use the preconfigured routing/forwarding table for this. The process is described on page 223 of the third edition of Computer Systems: A Networking Approach. Basically, we can find the next hop by looping through each entry in the routing table to bitwise AND each entry's subnet mask with the destination IP address. If this result is the same as the subnet number (the destination in our routing table), then we have found the matching interface we need to forward this packet to. In our sample routing table, there was no need for this since the mask is 255.255.255.255 and all the destinations equals each host when binary AND'ed together, but it still might be beneficial to implement this functionality, since who knows what other routing tables we may be tested on.
+
+#### Routing table match
+If the above matching returns a result, look in ARP cache for the receiver IP->MAC mapping. We now have all the information we need to forward the packet, so rewrite the headers and forward it!
+
+If the ARP cache returns a miss, cache the packet and wait sending it until an ARP reply returns from the receiver so we can cache their MAC address and send the packet.
+
+#### Routing table miss
+
+If the subnet mapping doesn't return any result, we have been asked to forward a packet to a destination we do not know about! So drop the packet and send an ICMP error message network unreachable (type 3, code 0) back to the sender.
 
 ### TCP/UDP packets
 If they're destined to the router, a ICMP t3 packet is constructed and returned (took me forever to figure out *not* to use the sr_icmp_hdr structure) to the sender with type destination unreachable (3) and code port unreachable (3). All of this was found in the Wikipedia article on ICMPv4 packets [here](http://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Destination_unreachable). This is also where I finally figured out that you need to include the "rest of header" (in our case, the IP header and first 8 bytes of data from packet we ignored) information when responding with destination unreachable.

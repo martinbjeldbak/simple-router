@@ -17,7 +17,7 @@ struct sr_if* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip) {
       return sr_get_interface(sr, rt->interface);
     rt = rt->next;
   }
-  Debug("sr_ip_to_iface found no interface for given ip, returning null");
+  Debug("sr_ip_to_iface found no interface for given ip, returning null\n");
   return NULL;
 }
 
@@ -27,43 +27,12 @@ void sr_handle_arp(struct sr_instance* sr,
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
 
+  Debug("Sensed an ARP packet, processing it\n");
+
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
     sr_handle_arp_req(sr, eth_hdr, arp_hdr, iface);
   else if(ntohs(arp_hdr->ar_op) == arp_op_reply)
     sr_handle_arp_rep(sr, eth_hdr, arp_hdr, iface);
-}
-
-int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
-    unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
-    uint8_t *packet = (uint8_t *)malloc(len);
-    bzero(packet, len);
-
-    struct sr_ethernet_hdr *eth_hdr = packet_get_eth_hdr(packet);
-    struct sr_arp_hdr *arp_hdr = packet_get_arp_hdr(packet);
-
-    // Get the router's interface connected to the target IP
-    // we need (using the routing table)
-    struct sr_if *iface = sr_find_iface_for_ip(sr, tip);
-
-    // Set ethernet header destination to broadcast MAC address
-    memset(eth_hdr->ether_dhost, 0xff, ETHER_ADDR_LEN);
-    // Set ethernet source to be the router's interface's MAC
-    memcpy(eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
-    eth_hdr->ether_type = htons(ethertype_arp);
-
-    arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
-    arp_hdr->ar_pro = htons(ethertype_ip);
-    arp_hdr->ar_hln = ETHER_ADDR_LEN;
-    arp_hdr->ar_pln = 4;
-    arp_hdr->ar_op = 1;
-    memcpy(arp_hdr->ar_sha, iface->addr, ETHER_ADDR_LEN);
-    arp_hdr->ar_sip = iface->ip;
-    memset(arp_hdr->ar_tha, 0xff, ETHER_ADDR_LEN);
-    arp_hdr->ar_tip = tip;
-
-    int res = sr_send_packet(sr, packet, len, iface->name);
-    free(packet);
-    return res;
 }
 
 /*
@@ -75,7 +44,7 @@ void sr_handle_arp_rep(struct sr_instance* sr,
 
   // Check if interface fits for packet and we are the dest
   if(iface && (arp_hdr->ar_tip == iface->ip)) {
-    Debug("Got ARP reply at interfce %s, caching it", iface->name);
+    Debug("\tGot ARP reply at interfce %s, caching it\n", iface->name);
 
     // Cache it
     struct sr_arpreq *req
@@ -89,6 +58,7 @@ void sr_handle_arp_rep(struct sr_instance* sr,
       while(waiter) {
 
         // TODO: try to send the IP packet
+        Debug("TODO: try to send IP packet in reply handling\n");
 
         // Try to go to next waiting packet
         waiter = waiter->next;
@@ -97,7 +67,7 @@ void sr_handle_arp_rep(struct sr_instance* sr,
     }
   }
   else
-    Debug("Dropped an ARP reply beause it was not receieved at any iface");
+    Debug("\tDropped an ARP reply beause it was not receieved at any iface\n");
 
   // The discussion slides say to , but sr_arpcache_sweepreqs already gets called
   // once every second...
@@ -108,7 +78,7 @@ void sr_handle_arp_req(struct sr_instance* sr,
 
   // If the ARP req was for this me, respond with ARP reply
   if(req_arp_hdr->ar_tip == iface->ip) {
-    Debug("Request for this router, constructing reply");
+    Debug("\tGot ARP request at interfce %s, constructing reply\n", iface->name);
 
     unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
     uint8_t *rep_packet = (uint8_t *)malloc(len);
@@ -162,3 +132,31 @@ void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr,
     rep_arp_hdr->ar_tip = arp_hdr->ar_sip;
 }
 
+int sr_send_arp_req(struct sr_instance *sr, uint32_t tip, struct sr_if *iface) {
+    unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
+    uint8_t *packet = (uint8_t *)malloc(len);
+    bzero(packet, len);
+
+    struct sr_ethernet_hdr *eth_hdr = packet_get_eth_hdr(packet);
+    struct sr_arp_hdr *arp_hdr = packet_get_arp_hdr(packet);
+
+    // Set ethernet header destination to broadcast MAC address
+    memset(eth_hdr->ether_dhost, 0xff, ETHER_ADDR_LEN);
+    // Set ethernet source to be the router's interface's MAC
+    memcpy(eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
+    eth_hdr->ether_type = htons(ethertype_arp);
+
+    arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
+    arp_hdr->ar_pro = htons(ethertype_ip);
+    arp_hdr->ar_hln = ETHER_ADDR_LEN;
+    arp_hdr->ar_pln = 4;
+    arp_hdr->ar_op = htons(arp_op_request);
+    memcpy(arp_hdr->ar_sha, iface->addr, ETHER_ADDR_LEN);
+    arp_hdr->ar_sip = iface->ip;
+    memset(arp_hdr->ar_tha, 0xff, ETHER_ADDR_LEN);
+    arp_hdr->ar_tip = tip;
+
+    int res = sr_send_packet(sr, packet, len, iface->name);
+    free(packet);
+    return res;
+}

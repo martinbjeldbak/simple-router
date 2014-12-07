@@ -11,6 +11,7 @@
 #include "sr_if.h"
 #include "sr_protocol.h"
 #include "sr_handle_arp.h"
+#include "sr_utils.h"
 
 /*
  * This function handles sending ARP requests if necessary. Based on
@@ -20,9 +21,9 @@ void sr_arpcache_handle_req_sending(struct sr_instance *sr, struct sr_arpreq *re
   time_t now = time(NULL);
 
   if(difftime(now, req->sent) > 1.0) {
-    Debug("ARP req still pending, finding out whether to drop or send again");
+    Debug("\t\tARP req still pending, finding out whether to drop or send again\n");
     if(req->times_sent >= 5) {
-      Debug("Dropping ARP request and sending ICMP host unreachable");
+      Debug("Dropping ARP request and sending ICMP host unreachable\n");
       /*
          send icmp host unreachable to source addr of all pkts waiting
          on this request
@@ -30,8 +31,7 @@ void sr_arpcache_handle_req_sending(struct sr_instance *sr, struct sr_arpreq *re
       sr_arpreq_destroy(&sr->cache, req);
     }
     else {
-      Debug("Sending ARP req again");
-      sr_send_arp_req(sr, req->ip);
+      sr_send_arp_req(sr, req->ip, sr_get_interface(sr, req->packets->iface));
       req->sent = time(NULL);
       req->times_sent++;
     }

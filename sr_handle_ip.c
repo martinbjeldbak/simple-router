@@ -22,18 +22,20 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
 
   // If we are the receiver
   if(iface->ip == ip_hdr->ip_dst) {
+    Debug("Got a packet destined for the router\n");
     sr_handle_ip_rec(sr, packet, len, iface);
   }
   // Not for me, do IP forwarding
   else {
-    Debug("Got a packet not destined to the router: ");
+    Debug("Got a packet not destined to the router\n");
     // Decrement TTL
     ip_hdr->ip_ttl--;
     // TODO: Do I recompute the checksum now that it's decremented?
 
     // If TTL now 0, drop and let receiver know
     if(ip_hdr->ip_ttl == 0) {
-      Debug("Decremented a packet to TTL of 0, dropping and sending TTL expired\n");
+      Debug("\tDecremented a packet to TTL of 0, \
+          dropping and sending TTL expired\n");
       sr_send_icmp_t3_to(sr, packet,
           icmp_protocol_type_time_exceed,
           icmp_protocol_code_ttl_expired,
@@ -43,17 +45,33 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
     // Get interface we need to send this packet out on
     struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_dst);
 
+    // See if we have a matching interface to forward the packet to
     if(out_if) {
+      struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache,
+          ip_hdr->ip_dst);
+      if(arp_entry) {
+        Debug("TODO: Actually forward the packet\n");
+      }
+      else {
+        Debug("\tNo entry found for receiver IP, queing packet \
+            and sending ARP req\n");
+        struct sr_arpreq *req = sr_arpcache_queuereq(&sr->cache, 
+            ip_hdr->ip_dst, packet, len, out_if->name);
+
+        sr_arpcache_handle_req_sending(sr, req);
+      }
     }
     else {
+      // Don't know where to forward this, ICMP error send net unreachable
+      Debug("\tGo home, you're drunk! I don't have an interface for that!\n");
+      sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
+          icmp_protocol_code_net_unreach, iface);
     }
-
-    //sr_print_routing_entry(out_rt);
   }
 }
 
 void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
-  Debug("Got IP packet: ");
+  Debug("Got IP packet:\n");
 
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
@@ -64,7 +82,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
     // If packet is a TCP or UDP packet...
     case ip_protocol_tcp:
     case ip_protocol_udp:
-      Debug("TCP/UDP request received, sending port unreachable\n");
+      Debug("\tTCP/UDP request received, sending port unreachable\n");
       // Send ICMP port unreachable
       sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
           icmp_protocol_code_port_unreach, iface);
@@ -82,14 +100,14 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
       //}
       if(icmp_hdr->icmp_type == icmp_protocol_type_echo_req &&
           icmp_hdr->icmp_code == icmp_protocol_code_empty) {
-        Debug("Got an echo (ping) request, responding with reply\n");
+        Debug("\tGot an echo (ping) request, responding with reply\n");
         // Send ICMP echo reply
         sr_modify_and_send_icmp(sr, icmp_protocol_type_echo_rep,
             icmp_protocol_type_echo_rep, packet, len, iface);
       }
       break;
     default:
-      Debug("Unable to process packet with protocol number %d\n", ip_proto);
+      Debug("\tUnable to process packet with protocol number %d\n", ip_proto);
       return;
   }
 }
