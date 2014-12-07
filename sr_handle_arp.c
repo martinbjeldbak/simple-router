@@ -5,22 +5,6 @@
 #include "sr_handle_arp.h"
 #include "sr_rt.h"
 
-/*
- Uses the given routing table to find the interface where an IP
- destination resides on
- */
-struct sr_if* sr_find_iface_for_ip(struct sr_instance *sr, uint32_t ip) {
-  struct sr_rt *rt = sr->routing_table;
-
-  while(rt->next != NULL) {
-    if(rt->dest.s_addr == ip)
-      return sr_get_interface(sr, rt->interface);
-    rt = rt->next;
-  }
-  Debug("sr_ip_to_iface found no interface for given ip, returning null\n");
-  return NULL;
-}
-
 void sr_handle_arp(struct sr_instance* sr,
     uint8_t *packet, unsigned int len, struct sr_if *iface) {
   // Get packet arp header to see what kind of arp we got
