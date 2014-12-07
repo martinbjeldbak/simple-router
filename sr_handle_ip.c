@@ -121,57 +121,6 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len)
   }
 }
 
-// Sends an ICMP error message from sr out of interface iface
-// to receiver noted in the uint8_t receiver IP packet.
-int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
-    uint8_t icmp_type, uint8_t icmp_code) {
-
-  unsigned int len = sizeof(sr_ethernet_hdr_t) +
-    sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
-  uint8_t *packet = (uint8_t *)malloc(len);
-  bzero(packet, len);
-
-  // Get our newly constructed packet headers
-  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
-  sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
-  sr_icmp_t3_hdr_t *icmp_hdr = packet_get_icmp_t3_hdr(packet);
-
-  // Get original sender (our receiver) header infos
-  sr_ethernet_hdr_t *rec_eth_hdr = packet_get_eth_hdr(receiver);
-  sr_ip_hdr_t *rec_ip_hdr = packet_get_ip_hdr(receiver);
-
-  // Get interface we should be sending the packet on
-  struct sr_if *iface = sr_iface_for_dst(sr, rec_ip_hdr->ip_src);
-
-  // Construct ethernet hdr
-  memcpy(eth_hdr->ether_dhost, rec_eth_hdr->ether_shost, ETHER_ADDR_LEN);
-  memcpy(eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
-  eth_hdr->ether_type = htons(ethertype_ip);
-
-  // Construct ip hdr
-  ip_hdr->ip_hl = rec_ip_hdr->ip_hl;
-  ip_hdr->ip_id = 0;
-  ip_hdr->ip_p = ip_protocol_icmp;
-  ip_hdr->ip_tos = rec_ip_hdr->ip_tos;
-  ip_hdr->ip_off = htons(IP_DF); // set dont fragment bit
-  ip_hdr->ip_ttl = INIT_TTL;
-  ip_hdr->ip_v = rec_ip_hdr->ip_v;
-  ip_hdr->ip_src = iface->ip;
-  ip_hdr->ip_dst = rec_ip_hdr->ip_src;
-  ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-  ip_hdr->ip_sum = cksum((const void *)ip_hdr,
-      sizeof(sr_ip_hdr_t));
-
-  // Construct ICMP header
-  icmp_hdr->icmp_type = icmp_type;
-  icmp_hdr->icmp_code = icmp_code;
-  memcpy(icmp_hdr->data, rec_ip_hdr, ICMP_DATA_SIZE);
-  icmp_hdr->icmp_sum = cksum((const void *)icmp_hdr,
-      sizeof(sr_icmp_t3_hdr_t)); // cksum of ICMP
-
-  int res = sr_send_packet(sr, packet, len, iface->name);
-  return res;
-}
 
 int sr_modify_and_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
