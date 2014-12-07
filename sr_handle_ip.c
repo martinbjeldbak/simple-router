@@ -11,7 +11,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
   //print_hdrs(packet, len);
 
   // Extract ethernet and IP hdrs
-  //sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
+  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
   // Check IP header for checksum corruption
@@ -30,12 +30,11 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
     Debug("Got a packet not destined to the router\n");
     // Decrement TTL
     ip_hdr->ip_ttl--;
-    // TODO: Do I recompute the checksum now that it's decremented?
 
     // If TTL now 0, drop and let receiver know
     if(ip_hdr->ip_ttl == 0) {
       Debug("\tDecremented a packet to TTL of 0, \
-          dropping and sending TTL expired\n");
+          dropping and sending TTL expired ICMP\n");
       sr_send_icmp_t3_to(sr, packet,
           icmp_protocol_type_time_exceed,
           icmp_protocol_code_ttl_expired,
@@ -50,7 +49,11 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
       struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache,
           ip_hdr->ip_dst);
       if(arp_entry) {
-        Debug("TODO: Actually forward the packet\n");
+        Debug("Using next_hop_ip->mac mapping in entry to send the packet\n");
+
+        free(arp_entry);
+        forward_packet(sr, packet, len, arp_entry->mac, out_if);
+        return;
       }
       else {
         Debug("\tNo entry found for receiver IP, queing packet \
@@ -59,6 +62,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
             ip_hdr->ip_dst, packet, len, out_if->name);
 
         sr_arpcache_handle_req_sending(sr, req);
+        return;
       }
     }
     else {
@@ -69,6 +73,7 @@ void sr_handle_ip(struct sr_instance *sr, uint8_t *packet, unsigned int len, str
     }
   }
 }
+
 
 void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
   Debug("Got IP packet:\n");

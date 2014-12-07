@@ -32,15 +32,14 @@ void sr_handle_arp(struct sr_instance* sr,
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
     sr_handle_arp_req(sr, eth_hdr, arp_hdr, iface);
   else if(ntohs(arp_hdr->ar_op) == arp_op_reply)
-    sr_handle_arp_rep(sr, eth_hdr, arp_hdr, iface);
+    sr_handle_arp_rep(sr, arp_hdr, iface);
 }
 
 /*
  * ARP reply processing. Based on the pseudocode given in
  * the header file.
  */
-void sr_handle_arp_rep(struct sr_instance* sr,
-    sr_ethernet_hdr_t *eth_hdr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
+void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
 
   // Check if interface fits for packet and we are the dest
   if(iface && (arp_hdr->ar_tip == iface->ip)) {
@@ -57,8 +56,8 @@ void sr_handle_arp_rep(struct sr_instance* sr,
       // Loop through waiting
       while(waiter) {
 
-        // TODO: try to send the IP packet
-        Debug("TODO: try to send IP packet in reply handling\n");
+        Debug("Forwarding packet that has been waiting for ARP reply\n");
+        forward_packet(sr, waiter->buf, waiter->len, arp_hdr->ar_sha, iface);
 
         // Try to go to next waiting packet
         waiter = waiter->next;

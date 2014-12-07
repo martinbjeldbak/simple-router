@@ -254,3 +254,17 @@ struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst) {
   return NULL;
 }
 
+void forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_if) {
+  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
+  sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
+
+  memcpy(eth_hdr->ether_dhost, dest_mac, ETHER_ADDR_LEN);
+  memcpy(eth_hdr->ether_shost, out_if->addr, ETHER_ADDR_LEN);
+  // Recompute checksum
+  ip_hdr->ip_sum = 0;
+  ip_hdr->ip_sum = cksum((const void *)ip_hdr,
+      sizeof(sr_ip_hdr_t)); 
+
+  // Send it away!
+  sr_send_packet(sr, packet, len, out_if->name);
+}
