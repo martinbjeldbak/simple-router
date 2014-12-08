@@ -12,7 +12,7 @@ all : sr
 CC = gcc
 
 OSTYPE = $(shell uname)
-CFLAGS = -g -Wall -std=c99 -D_DEBUG_ -D_GNU_SOURCE $(ARCH)
+CFLAGS = -g -Wall -D_DEBUG_ -D_GNU_SOURCE $(ARCH)
 
 ifeq ($(OSTYPE),CYGWIN_NT-5.1)
 ARCH = -D_CYGWIN_
@@ -21,6 +21,7 @@ endif
 ifeq ($(OSTYPE),Linux)
 ARCH = -D_LINUX_
 SOCK = -lnsl -lresolv
+override CFLAGS += -I include -std=gnu99 -m64 -Qunused-arguments
 endif
 
 ifeq ($(OSTYPE),SunOS)
