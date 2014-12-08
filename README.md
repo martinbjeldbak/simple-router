@@ -3,7 +3,7 @@ In this lab assignment you will be writing a simple router with a static routing
 
 Your router will route real packets from a emulated host (client) to two emulated application servers (http server 1/2) sitting behind your router. The application servers are each running an HTTP server. When you have finished the forwarding path of your router, you should be able to access these servers using regular client software. In addition, you should be able to ping and traceroute to and through a functioning Internet router. A sample routing topology is shown below:
 
-![Topology for Simple Router](images/sr_topo.png)
+![Topology for Simple Router](https://raw.githubusercontent.com/wiki/mininet/mininet/images/sr_topo.png)
 
 If the router is functioning correctly, all of the following operations should work:
 
