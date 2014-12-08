@@ -115,9 +115,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
       //}
       if(icmp_hdr->icmp_type == icmp_protocol_type_echo_req &&
           icmp_hdr->icmp_code == icmp_protocol_code_empty) {
-        Debug("\tIt's an echo (ping) request, responding with reply\n");
-        sr_print_if(iface);
-
+        
         // Send ICMP echo reply
         sr_modify_and_send_icmp(sr, icmp_protocol_type_echo_rep,
             icmp_protocol_type_echo_rep, packet, len, iface);
