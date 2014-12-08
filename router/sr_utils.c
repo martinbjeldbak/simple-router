@@ -266,6 +266,7 @@ void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len
       sizeof(sr_ip_hdr_t)); 
 
   // Send it away!
+  Debug("Forwarding the packet!\n");
   sr_send_packet(sr, packet, len, out_if->name);
 }
 
