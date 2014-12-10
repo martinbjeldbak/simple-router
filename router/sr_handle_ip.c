@@ -7,26 +7,28 @@
 #include "sr_handle_ip.h"
 
 void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
-  // Extract and IP hdr
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
   // Check IP header for checksum corruption
+  // TODO: Add utility methods for sanity checking
   if(chk_ip_chksum(ip_hdr) == -1) {
     Debug("Computed checksum IP is not same as given. Dropping packet\n");
     return;
   }
 
-  struct sr_if *iface = sr->if_list;
+  struct sr_if *iface_walker = sr->if_list;
 
   // Loop through all interfaces to see if it matches one
-  while(iface) {
-    // If we are the receiver
-    if(iface->ip == ip_hdr->ip_dst) {
-      Debug("Got a packet destined for the router\n");
-      sr_handle_ip_rec(sr, packet, len, iface);
+  while(iface_walker) {
+    // If we are the receiver, could also compare ethernet
+    // addresses as an extra check
+    if(iface_walker->ip == ip_hdr->ip_dst) {
+      Debug("Got a packet destined the router at interface %s\n",
+          iface_walker->iface);
+      sr_handle_ip_rec(sr, packet, len, iface_walker);
       return;
     }
-    iface = iface->next;
+    iface_walker = iface_walker->next;
   }
 
   // Not for me, do IP forwarding
@@ -43,7 +45,7 @@ void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, str
         rec_iface);
   }
 
-  // Now do the forwarding for this packet
+  // Sanity checks done, forward packet
   sr_do_forwarding(sr, packet, len, rec_iface);
 }
 

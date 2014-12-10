@@ -40,7 +40,10 @@ If the ARP cache returns a miss, cache the packet and wait sending it until an A
 If the subnet mapping doesn't return any result, we have been asked to forward a packet to a destination we do not know about! So drop the packet and send an ICMP error message network unreachable (type 3, code 0) back to the sender.
 
 ### TCP/UDP packets
-If they're destined to the router, a ICMP t3 packet is constructed and returned (took me forever to figure out *not* to use the sr_icmp_hdr structure) to the sender with type destination unreachable (3) and code port unreachable (3). All of this was found in the Wikipedia article on ICMPv4 packets [here](http://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Destination_unreachable). This is also where I finally figured out that you need to include the "rest of header" (in our case, the IP header and first 8 bytes of data from packet we ignored) information when responding with destination unreachable.
+If they're destined to the router, a ICMP t3 packet is constructed and returned (took me forever to figure out *not* to use the sr_icmp_hdr structure, since we need to append some bits of the packet's header to the ICMP packet) to the sender with type destination unreachable (3) and code port unreachable (3). Most of this was found in the Wikipedia article on ICMPv4 packets [here](http://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Destination_unreachable). This is also where I finally figured out that you need to include the "rest of header" (in our case, the IP header and first 8 bytes of data from packet we ignored) information when responding with destination unreachable.
+
+I check whether the packet is for the router by comparing the incoming packet's IP destination with each interface's IP. As an extra check, you could also compare the incoming frame's ethernet destination address with each of the interface's ethernet addresses, but I think comparing IPs is enough (and thus didn't see the need to create a function to compare a uint8_t array with a char array).
+
 
 ### ICMP packets
 If they're destined to router with type echo request (control message 8) simply send an ICMP echo reply (control message 0) back to the origin after having recomputed the checksum and modified the enclosing ethernet and IP packets.
