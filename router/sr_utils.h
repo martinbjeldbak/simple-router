@@ -57,6 +57,8 @@ struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst);
 
 void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_if);
 
+int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if *rec_if);
+
 int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver, uint8_t icmp_type, uint8_t icmp_code, struct sr_if* rec_iface);
 
 int sr_send_arp_req(struct sr_instance *sr, uint32_t tip);

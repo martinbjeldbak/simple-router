@@ -269,6 +269,35 @@ void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len
   sr_send_packet(sr, packet, len, out_if->name);
 }
 
+/*
+ * Modifies the given ICMP packet and sends it back out, not
+ * adding a data section to the packet (only used when we
+ * get an ICMP message in sr_handle_ip.c)
+ */
+int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if * rec_if) {
+  sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
+  sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
+  sr_icmp_hdr_t *icmp_hdr = packet_get_icmp_hdr(packet);
+
+  // Get interface we should be sending the packet out on
+  struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_src);
+
+  memcpy(eth_hdr->ether_dhost, eth_hdr->ether_shost, ETHER_ADDR_LEN);
+  memcpy(eth_hdr->ether_shost, out_if->addr, ETHER_ADDR_LEN);
+
+  uint32_t req_src = ip_hdr->ip_src;
+  ip_hdr->ip_src = rec_if->ip; // src is this interface's ip
+  ip_hdr->ip_dst = req_src; // dst is requester's ip
+
+  icmp_hdr->icmp_type = icmp_type;
+  icmp_hdr->icmp_code = icmp_code;
+  icmp_hdr->icmp_sum = cksum(icmp_hdr,
+      sizeof(sr_icmp_hdr_t)); // cksum of ICMP
+
+  int res = sr_send_packet(sr, packet, len, out_if->name);
+  return res;
+}
+
 // Sends an ICMP error message from sr out of interface iface
 // to receiver noted in the uint8_t receiver IP packet.
 int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
