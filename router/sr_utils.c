@@ -272,7 +272,7 @@ void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len
 // Sends an ICMP error message from sr out of interface iface
 // to receiver noted in the uint8_t receiver IP packet.
 int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
-    uint8_t icmp_type, uint8_t icmp_code) {
+    uint8_t icmp_type, uint8_t icmp_code, struct sr_if *rec_iface) {
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) +
     sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
@@ -304,7 +304,7 @@ int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver,
   ip_hdr->ip_off = htons(IP_DF); // set dont fragment bit
   ip_hdr->ip_ttl = INIT_TTL;
   ip_hdr->ip_v = rec_ip_hdr->ip_v;
-  ip_hdr->ip_src = iface->ip;
+  ip_hdr->ip_src = rec_iface->ip;
   ip_hdr->ip_dst = rec_ip_hdr->ip_src;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_sum = cksum((const void *)ip_hdr,
