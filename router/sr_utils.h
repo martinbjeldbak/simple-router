@@ -28,8 +28,6 @@
 #ifndef SR_UTILS_H
 #define SR_UTILS_H
 
-int chk_ip_chksum(sr_ip_hdr_t *ip_hdr);
-int chk_icmp_cksum(sr_icmp_hdr_t *icmp_hdr);
 uint16_t cksum(const void *_data, int len);
 
 uint16_t ethertype(uint8_t *buf);
@@ -47,6 +45,7 @@ void print_hdr_arp(uint8_t *buf);
 /* prints all headers, starting from eth */
 void print_hdrs(uint8_t *buf, uint32_t length);
 
+/* Helper methods to extract headers from packets */
 sr_arp_hdr_t *packet_get_arp_hdr(uint8_t *packet);
 sr_ethernet_hdr_t *packet_get_eth_hdr(uint8_t *packet);
 sr_ip_hdr_t *packet_get_ip_hdr(uint8_t *packet);
@@ -57,10 +56,17 @@ struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst);
 
 void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len, uint8_t* dest_mac, struct sr_if *out_iface);
 
-int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if *rec_if);
+int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if *rec_iface);
 
 int sr_send_icmp_t3_to(struct sr_instance *sr, uint8_t *receiver, uint8_t icmp_type, uint8_t icmp_code, struct sr_if* rec_iface);
 
 int sr_send_arp_req(struct sr_instance *sr, uint32_t tip);
+
+uint8_t sanity_check_arp_packet_len_ok(unsigned int len);
+uint8_t sanity_check_ip_packet_len_ok(unsigned int len);
+uint8_t sanity_check_icmp_packet_len_ok(unsigned int len);
+
+uint8_t is_ip_chksum_ok(sr_ip_hdr_t *ip_hdr);
+uint8_t is_icmp_chksum_ok(uint16_t ip_len, sr_icmp_hdr_t *icmp_hdr);
 
 #endif /* -- SR_UTILS_H -- */

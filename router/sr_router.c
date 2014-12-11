@@ -86,11 +86,6 @@ void sr_handlepacket(struct sr_instance* sr,
   // Get interface of router this packet was received on
   struct sr_if *rec_iface = sr_get_interface(sr, interface);
 
-  if(rec_iface == NULL) {
-    Debug("Packet oddly not received on an interface...\n");
-    return;
-  }
-
   switch(ethtype) {
     case ethertype_arp:
       sr_handle_arp(sr, packet, len, rec_iface);

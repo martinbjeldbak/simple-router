@@ -6,34 +6,6 @@
 #include "sr_router.h"
 #include "sr_utils.h"
 
-// Returns -1 if unequal, 1 if we're good
-int chk_ip_chksum(sr_ip_hdr_t *ip_hdr) {
-  uint16_t buf = ip_hdr->ip_sum;
-  ip_hdr->ip_sum = 0; // set to 0 so it's not part of computed chksum
-
-  if (cksum(ip_hdr, sizeof(sr_ip_hdr_t)) != buf) {
-    ip_hdr->ip_sum = buf; // reset cheksum as if nothing happened...
-    return -1;
-  }
-  else {
-    ip_hdr->ip_sum = buf; // reset checksum as if nothing happened...
-    return 1;
-  }
-}
-
-int chk_icmp_cksum(sr_icmp_hdr_t *icmp_hdr) {
-  uint16_t buf = icmp_hdr->icmp_sum;
-  icmp_hdr->icmp_sum = 0; // set to 0 so it's not part of computed chksum
-
-  if (cksum(icmp_hdr, sizeof(sr_icmp_hdr_t)) != buf) {
-    icmp_hdr->icmp_sum = buf; // reset cheksum as if nothing happened...
-    return -1;
-  }
-  else {
-    icmp_hdr->icmp_sum = buf; // reset checksum as if nothing happened...
-    return 1;
-  }
-}
 
 uint16_t cksum(const void *_data, int len) {
   const uint8_t *data = _data;
@@ -377,4 +349,51 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
 
   int res = sr_send_packet(sr, packet, len, out_iface->name);
   return res;
+}
+
+uint8_t sanity_check_arp_packet_len_ok(unsigned int len) {
+  uint8_t under = len >= (sizeof(sr_ethernet_hdr_t) +
+      sizeof(sr_arp_hdr_t));
+  return under;
+}
+
+uint8_t sanity_check_ip_packet_len_ok(unsigned int len) {
+  uint8_t under = len >= (sizeof(sr_ethernet_hdr_t) +
+      sizeof(sr_ip_hdr_t));
+  return under;
+}
+
+uint8_t sanity_check_icmp_packet_len_ok(unsigned int len) {
+  uint8_t under = len >= (sizeof(sr_ethernet_hdr_t) +
+      sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
+  return under;
+}
+
+// Returns -1 if unequal, 1 if we're good
+uint8_t is_ip_chksum_ok(sr_ip_hdr_t *ip_hdr) {
+  uint16_t buf = ip_hdr->ip_sum;
+  ip_hdr->ip_sum = 0; // temporarily substitue with 0
+
+  if(cksum(ip_hdr, sizeof(sr_ip_hdr_t)) == buf) {
+    ip_hdr->ip_sum = buf; // reset cheksum as if nothing happened...
+    return 1;
+  }
+  else {
+    ip_hdr->ip_sum = buf; // reset checksum as if nothing happened...
+    return 0;
+  }
+}
+
+uint8_t is_icmp_chksum_ok(uint16_t ip_len, sr_icmp_hdr_t *icmp_hdr) {
+  uint16_t buf = icmp_hdr->icmp_sum;
+  icmp_hdr->icmp_sum = 0; // temporarily substitute with 0
+
+  if(cksum((uint8_t *)icmp_hdr, ntohs(ip_len) - sizeof(sr_ip_hdr_t)) == buf) {
+    icmp_hdr->icmp_sum = buf; // reset cheksum as if nothing happened...
+    return 1;
+  }
+  else {
+    icmp_hdr->icmp_sum = buf; // reset checksum as if nothing happened...
+    return 0;
+  }
 }

@@ -9,12 +9,13 @@
 void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
-  // Check IP header for checksum corruption
-  // TODO: Add utility methods for sanity checking
-  if(chk_ip_chksum(ip_hdr) == -1) {
-    Debug("Computed checksum IP is not same as given. Dropping packet\n");
-    return;
-  }
+  /*
+  if(!sanity_check_ip_packet_len_ok(len))
+    Debug("Sanity check for IP packet failed! Quitting.\n"); return;
+
+  if(!is_ip_chksum_ok(ip_hdr))
+    Debug("Computed checksum IP is not same as given. Dropping packet\n"); return;
+    */
 
   struct sr_if *iface_walker = sr->if_list;
 
@@ -36,7 +37,7 @@ void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, str
   // Decrement TTL
   ip_hdr->ip_ttl--;
 
-  // If TTL now 0, drop and let receiver know
+  // If TTL now 0, drop and let sender know
   if(ip_hdr->ip_ttl == 0) {
     Debug("\tDecremented a packet to TTL of 0, dropping and sending TTL expired ICMP\n");
     sr_send_icmp_t3_to(sr, packet,
@@ -110,12 +111,16 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
       // Extract header info
       sr_icmp_hdr_t *icmp_hdr = packet_get_icmp_hdr(packet);
 
-      // Check ICMP checksum for corruption
-      // TODO: not working
-      //if(chk_icmp_cksum(icmp_hdr) == -1) {
-      //  Debug("Computed ICMP checksum is not same as given. Dropping packet");
-      //  return;
-      //}
+      // Check for off length or checksums
+      if(!sanity_check_icmp_packet_len_ok(len)) {
+        Debug("Got ICMP packet that was too small. Dropping packet.\n");
+        return;
+      }
+      if(!is_icmp_chksum_ok(ip_hdr->ip_len, icmp_hdr)) {
+        Debug("Computed ICMP checksum is not same as given. Dropping packet.\n"); 
+        return;
+      }
+
       if(icmp_hdr->icmp_type == icmp_protocol_type_echo_req &&
           icmp_hdr->icmp_code == icmp_protocol_code_empty) {
         
