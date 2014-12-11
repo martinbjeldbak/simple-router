@@ -120,7 +120,7 @@ void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet,
 }
 
 void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet,
-    unsigned int len, struct sr_if *iface) {
+    unsigned int len, struct sr_if *rec_iface) {
   Debug("Got IP packet:\n");
 
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
@@ -133,10 +133,10 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet,
     case ip_protocol_tcp:
     case ip_protocol_udp:
       Debug("\tTCP/UDP request received on iface %s, sending port unreachable\n",
-          iface->name);
+          rec_iface->name);
       // Send ICMP port unreachable
       sr_send_icmp_t3_to(sr, packet, icmp_protocol_type_dest_unreach,
-          icmp_protocol_code_port_unreach, iface);
+          icmp_protocol_code_port_unreach, rec_iface);
       break;
     // If it is an ICMP packet...
     case ip_protocol_icmp: ;
@@ -151,7 +151,7 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet,
         
         // Send ICMP echo reply
         sr_send_icmp(sr, icmp_protocol_type_echo_rep,
-            icmp_protocol_type_echo_rep, packet, len, iface);
+            icmp_protocol_type_echo_rep, packet, len, rec_iface);
       }
       break;
     default:

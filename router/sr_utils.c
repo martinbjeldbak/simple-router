@@ -246,7 +246,8 @@ void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len
  * adding a data section to the packet (only used when we
  * get an ICMP message in sr_handle_ip.c)
  */
-int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if * rec_iface) {
+int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type,
+    uint8_t icmp_code, uint8_t *packet, int len, struct sr_if * rec_iface) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
   sr_icmp_hdr_t *icmp_hdr = packet_get_icmp_hdr(packet);
