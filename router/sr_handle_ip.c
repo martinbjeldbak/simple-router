@@ -73,6 +73,7 @@ void sr_handle_ip(struct sr_instance* sr, uint8_t *packet,
     sr_send_icmp_t3_to(sr, packet,
         icmp_protocol_type_time_exceed, icmp_protocol_code_ttl_expired,
         rec_iface);
+    return;
   }
 
   // Sanity checks done, forward packet
