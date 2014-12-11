@@ -6,18 +6,48 @@
 #include "sr_utils.h"
 #include "sr_handle_ip.h"
 
+/* Scope: local to this file
+ * Given the IP header and the length of the entire packet, finds out
+ * whether the length of the packet is at least what is required to fill the
+ * header, along with making sure that the header checksum is calculated correctly
+ */
+uint8_t is_sanity_check_of_ip_packet_ok(sr_ip_hdr_t *ip_hdr, unsigned int len) {
+  uint8_t flag = 1; // assume all is well
+  if(!sanity_check_ip_packet_len_ok(len)) {
+    Debug("Sanity check for IP packet failed! Dropping packet.\n");
+    flag = 0;
+  }
+  if(!is_ip_chksum_ok(ip_hdr)) {
+    Debug("Computed checksum IP is not same as given. Dropping packet.\n");
+    flag = 0;
+  }
+  return flag;
+}
+
+/* Scope: local to this file
+ * Serves same purpose as above, just for incoming ICMP packets and
+ * their headers.
+ */
+uint8_t is_sanity_check_of_icmp_packet_ok(sr_ip_hdr_t *ip_hdr,
+    sr_icmp_hdr_t *icmp_hdr, unsigned int len) {
+  uint8_t flag = 1;
+
+  if(!sanity_check_icmp_packet_len_ok(len)) {
+    Debug("Received ICMP packet that was too small. Dropping packet.\n");
+    flag = 0;
+  }
+  if(!is_icmp_chksum_ok(ip_hdr->ip_len, icmp_hdr)) {
+    Debug("Computed ICMP checksum is not same as given. Dropping packet.\n"); 
+    flag = 0;
+  }
+  return flag;
+}
+
 void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
-  if(!sanity_check_ip_packet_len_ok(len)) {
-    Debug("Sanity check for IP packet failed! Dropping packet.\n");
-    return;
-  }
-
-  if(!is_ip_chksum_ok(ip_hdr)) {
-    Debug("Computed checksum IP is not same as given. Dropping packet.\n"); return;
-    return;
-  }
+  // Check for too small packet length or wrong checksum
+  if(!is_sanity_check_of_ip_packet_ok(ip_hdr, len)) return;
 
   struct sr_if *iface_walker = sr->if_list;
 
@@ -113,15 +143,8 @@ void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len,
       // Extract header info
       sr_icmp_hdr_t *icmp_hdr = packet_get_icmp_hdr(packet);
 
-      // Check for off length or checksums
-      if(!sanity_check_icmp_packet_len_ok(len)) {
-        Debug("Got ICMP packet that was too small. Dropping packet.\n");
-        return;
-      }
-      if(!is_icmp_chksum_ok(ip_hdr->ip_len, icmp_hdr)) {
-        Debug("Computed ICMP checksum is not same as given. Dropping packet.\n"); 
-        return;
-      }
+      // Check for too small packet length or wrong checksum
+      if(!is_sanity_check_of_icmp_packet_ok(ip_hdr, icmp_hdr, len)) return;
 
       if(icmp_hdr->icmp_type == icmp_protocol_type_echo_req &&
           icmp_hdr->icmp_code == icmp_protocol_code_empty) {
