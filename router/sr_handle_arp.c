@@ -40,7 +40,11 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr,
   if(arp_hdr->ar_tip == rec_iface->ip) {
     Debug("\tGot ARP reply at interfce %s, caching it\n", rec_iface->name);
 
-    // Cache it
+    // Since there can be multiple calls to this function (one
+    // for each reply), get exclusive access to the cache
+    pthread_mutex_lock(&sr->cache.lock);
+
+    // Cache the reply 
     struct sr_arpreq *req = sr_arpcache_insert(&sr->cache,
         arp_hdr->ar_sha, arp_hdr->ar_sip);
 
@@ -50,7 +54,7 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr,
       struct sr_packet *waiting_packet_walker = req->packets;
       // Loop through waiting
       while(waiting_packet_walker) {
-        Debug("Forwarding packet that has been waiting for ARP reply\n");
+        Debug("Forwarding ia packet that has been waiting for ARP reply\n");
         sr_forward_packet(sr, waiting_packet_walker->buf,
             waiting_packet_walker->len, arp_hdr->ar_sha, rec_iface);
 
@@ -60,6 +64,9 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr,
       // Drop the request from oustanding queue since it is now forwarded
       sr_arpreq_destroy(&sr->cache, req);
     }
+
+    // Release the lock
+    pthread_mutex_unlock(&sr->cache.lock);
   }
 }
 
