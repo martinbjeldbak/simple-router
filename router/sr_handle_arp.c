@@ -3,7 +3,6 @@
 #include "sr_router.h"
 #include "sr_utils.h"
 #include "sr_handle_arp.h"
-#include "sr_rt.h"
 
 void sr_handle_arp(struct sr_instance* sr,
     uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
@@ -11,11 +10,11 @@ void sr_handle_arp(struct sr_instance* sr,
   sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
 
   if(!sanity_check_arp_packet_len_ok(len)) {
-    Debug("Sanity check for ARP packet failed! Quitting.\n");
+    Debug("Sanity check for ARP packet length failed! Ignoring ARP.\n");
     return;
   }
 
-  Debug("Sensed an ARP packet, processing it\n");
+  Debug("Sensed an ARP frame, processing it\n");
 
   switch(ntohs(arp_hdr->ar_op)) {
     case arp_op_request:
@@ -25,7 +24,7 @@ void sr_handle_arp(struct sr_instance* sr,
       sr_handle_arp_rep(sr, arp_hdr, rec_iface);
       break;
     default:
-      Debug("Didn't get an ARP packet I understood, quitting!\n");
+      Debug("Didn't get an ARP frame I understood, quitting!\n");
       return;
   }
 }
