@@ -1,7 +1,4 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include "sr_rt.h"
 #include "sr_router.h"
 #include "sr_utils.h"
 #include "sr_handle_ip.h"
@@ -43,7 +40,8 @@ uint8_t is_sanity_check_of_icmp_packet_ok(sr_ip_hdr_t *ip_hdr,
   return flag;
 }
 
-void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
+void sr_handle_ip(struct sr_instance* sr, uint8_t *packet,
+    unsigned int len, struct sr_if *rec_iface) {
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
   // Check for too small packet length or wrong checksum
@@ -73,8 +71,7 @@ void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, str
   if(ip_hdr->ip_ttl == 0) {
     Debug("\tDecremented a packet to TTL of 0, dropping and sending TTL expired ICMP\n");
     sr_send_icmp_t3_to(sr, packet,
-        icmp_protocol_type_time_exceed,
-        icmp_protocol_code_ttl_expired,
+        icmp_protocol_type_time_exceed, icmp_protocol_code_ttl_expired,
         rec_iface);
   }
 
@@ -87,7 +84,8 @@ void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, str
  * packet on it, sending an ICMP error message to the sender, if
  * we're unable to find the IP in the routing table
  */
-void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
+void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet,
+    unsigned int len, struct sr_if *rec_iface) {
   // Get interface we need to send this packet out on
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
   struct sr_if *out_if = sr_iface_for_dst(sr, ip_hdr->ip_dst);
@@ -120,7 +118,8 @@ void sr_do_forwarding(struct sr_instance *sr, uint8_t *packet, unsigned int len,
   }
 }
 
-void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet, unsigned int len, struct sr_if *iface) {
+void sr_handle_ip_rec(struct sr_instance *sr, uint8_t *packet,
+    unsigned int len, struct sr_if *iface) {
   Debug("Got IP packet:\n");
 
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
