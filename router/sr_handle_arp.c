@@ -6,7 +6,7 @@
 #include "sr_rt.h"
 
 void sr_handle_arp(struct sr_instance* sr,
-    uint8_t *packet, unsigned int len, struct sr_if *iface) {
+    uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
   // Get packet arp header to see what kind of arp we got
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_arp_hdr_t *arp_hdr = packet_get_arp_hdr(packet);
@@ -14,20 +14,21 @@ void sr_handle_arp(struct sr_instance* sr,
   Debug("Sensed an ARP packet, processing it\n");
 
   if(ntohs(arp_hdr->ar_op) == arp_op_request)
-    sr_handle_arp_req(sr, eth_hdr, arp_hdr, iface);
+    sr_handle_arp_req(sr, eth_hdr, arp_hdr, rec_iface);
   else if(ntohs(arp_hdr->ar_op) == arp_op_reply)
-    sr_handle_arp_rep(sr, arp_hdr, iface);
+    sr_handle_arp_rep(sr, arp_hdr, rec_iface);
 }
 
 /*
  * ARP reply processing. Based on the pseudocode given in
- * the header file.
+ * the header file sr_arpcache.h
  */
-void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_if* iface) {
+void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr,
+    struct sr_if* rec_iface) {
 
   // Check if we are destination of ARP reply
-  if(arp_hdr->ar_tip == iface->ip) {
-    Debug("\tGot ARP reply at interfce %s, caching it\n", iface->name);
+  if(arp_hdr->ar_tip == rec_iface->ip) {
+    Debug("\tGot ARP reply at interfce %s, caching it\n", rec_iface->name);
 
     // Cache it
     struct sr_arpreq *req = sr_arpcache_insert(&sr->cache,
@@ -41,7 +42,7 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_
       while(waiting_packet_walker) {
         Debug("Forwarding packet that has been waiting for ARP reply\n");
         sr_forward_packet(sr, waiting_packet_walker->buf,
-            waiting_packet_walker->len, arp_hdr->ar_sha, iface);
+            waiting_packet_walker->len, arp_hdr->ar_sha, rec_iface);
 
         // try to go to a next waiting packet
         waiting_packet_walker = waiting_packet_walker->next; 
@@ -57,32 +58,33 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_
  * it regardless of it was to us or not.
  */
 void sr_handle_arp_req(struct sr_instance* sr,
-    sr_ethernet_hdr_t *req_eth_hdr, sr_arp_hdr_t *req_arp_hdr, struct sr_if* iface) {
+    sr_ethernet_hdr_t *req_eth_hdr, sr_arp_hdr_t *req_arp_hdr, struct sr_if* rec_iface) {
+
+  // Insert this host into our ARP cache regardless if for me or not
+  sr_arpcache_insert(&sr->cache, req_arp_hdr->ar_sha, req_arp_hdr->ar_sip);
 
   // If the ARP req was for this me, respond with ARP reply
-  if(req_arp_hdr->ar_tip == iface->ip) {
-    Debug("\tGot ARP request at interfce %s, constructing reply\n", iface->name);
+  // I could also compare ethernet addresses here
+  if(req_arp_hdr->ar_tip == rec_iface->ip) {
+    Debug("\tGot ARP request at interfce %s, constructing reply\n", rec_iface->name);
 
     unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
     uint8_t *rep_packet = (uint8_t *)malloc(len);
     bzero(rep_packet, len);
 
-    // Construct ARP ethernet hdr
-    construct_arp_rep_eth_hdr_at(rep_packet, req_eth_hdr, iface);
+    // Construct ethernet hdr part of ARP reply packet
+    construct_arp_rep_eth_hdr_at(rep_packet, req_eth_hdr, rec_iface);
 
     // Construct ARP hdr
     construct_arp_rep_hdr_at(rep_packet + sizeof(sr_ethernet_hdr_t),
-        req_arp_hdr, iface);
+        req_arp_hdr, rec_iface);
 
-    // Put our new packet back on the wire
-    sr_send_packet(sr, rep_packet, len, iface->name);
+    // Put our new (modified) packet back on the wire
+    sr_send_packet(sr, rep_packet, len, rec_iface->name);
   }
-
-  // Insert this host into our ARP cache, even if ARP req isn't for us
-  sr_arpcache_insert(&sr->cache, req_arp_hdr->ar_sha, req_arp_hdr->ar_sip);
 }
 
-void construct_arp_rep_eth_hdr_at(uint8_t *buf, sr_ethernet_hdr_t *eth_hdr, struct sr_if *iface) {
+void construct_arp_rep_eth_hdr_at(uint8_t *buf, sr_ethernet_hdr_t *eth_hdr, struct sr_if *rec_iface) {
   // Construct ethernet hdr
   struct sr_ethernet_hdr *rep_eth_hdr = (sr_ethernet_hdr_t *)buf;
   // set destination to origin
@@ -90,14 +92,14 @@ void construct_arp_rep_eth_hdr_at(uint8_t *buf, sr_ethernet_hdr_t *eth_hdr, stru
       eth_hdr->ether_shost, ETHER_ADDR_LEN);
   //set source to our interface's eth addr
   memcpy(rep_eth_hdr->ether_shost,
-      iface->addr, ETHER_ADDR_LEN);
+      rec_iface->addr, ETHER_ADDR_LEN);
   // ethernet type is ARP
   rep_eth_hdr->ether_type = ntohs(ethertype_arp);
 }
 
 
 void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr,
-    struct sr_if *iface) {
+    struct sr_if *rec_iface) {
     sr_arp_hdr_t *rep_arp_hdr = (sr_arp_hdr_t *)buf;
     rep_arp_hdr->ar_hrd = arp_hdr->ar_hrd; // 1 for ethernet
     rep_arp_hdr->ar_pro = arp_hdr->ar_pro; // protocol format is IPv4 (0x800)
@@ -105,8 +107,8 @@ void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr,
     rep_arp_hdr->ar_pln = arp_hdr->ar_pln; // protocol length is same (4)
     rep_arp_hdr->ar_op = htons(arp_op_reply); // ARP reply
     memcpy(rep_arp_hdr->ar_sha,
-        iface->addr, ETHER_ADDR_LEN); // set hw addr
-    rep_arp_hdr->ar_sip = iface->ip; // setting us as sender
+        rec_iface->addr, ETHER_ADDR_LEN); // set hw addr
+    rep_arp_hdr->ar_sip = rec_iface->ip; // setting us as sender
     memcpy(rep_arp_hdr->ar_tha,
         arp_hdr->ar_sha, ETHER_ADDR_LEN); // target
     rep_arp_hdr->ar_tip = arp_hdr->ar_sip;

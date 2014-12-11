@@ -84,19 +84,19 @@ void sr_handlepacket(struct sr_instance* sr,
   //printf("*** -> Received packet of length %d \n",len);
 
   // Get interface of router this packet was received on
-  struct sr_if *iface = sr_get_interface(sr, interface);
+  struct sr_if *rec_iface = sr_get_interface(sr, interface);
 
-  if(iface == NULL) {
+  if(rec_iface == NULL) {
     Debug("Packet oddly not received on an interface...\n");
     return;
   }
 
   switch(ethtype) {
     case ethertype_arp:
-      sr_handle_arp(sr, packet, len, iface);
+      sr_handle_arp(sr, packet, len, rec_iface);
       break;
     case ethertype_ip:
-      sr_handle_ip(sr, packet, len, iface);
+      sr_handle_ip(sr, packet, len, rec_iface);
       break;
     default:
       fprintf(stderr, "Packet was neither of type ARP or IP, dropping\n");
