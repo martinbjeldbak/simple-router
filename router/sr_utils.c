@@ -230,27 +230,27 @@ sr_icmp_hdr_t *packet_get_icmp_hdr(uint8_t *packet) {
 }
 
 sr_icmp_t3_hdr_t *packet_get_icmp_t3_hdr(uint8_t *packet) {
-  // exact same as above function...
-  return (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  return (sr_icmp_t3_hdr_t *)packet_get_icmp_hdr(packet);
 }
 
-/*
+/* Uses routing table to find the subnet where we a destination
+ * IP is located.
  * Implementation of algorithm on page 222 in book,
  * don't need to use LPM when we have a routing table.
 */
 struct sr_if* sr_iface_for_dst(struct sr_instance *sr, uint32_t dst) {
-  struct sr_rt* cur_rt_entry = sr->routing_table; // current entry we're looking at
+  struct sr_rt* rt_walker = sr->routing_table; // current entry we're looking at
 
   // Loop through each entry in the routing table
-  while(cur_rt_entry) {
-    uint32_t d1 = cur_rt_entry->mask.s_addr & dst;
+  while(rt_walker) {
+    uint32_t d1 = rt_walker->mask.s_addr & dst;
 
-    if(d1 == cur_rt_entry->dest.s_addr)
-       return sr_get_interface(sr, cur_rt_entry->interface);
+    if(d1 == rt_walker->dest.s_addr)
+       return sr_get_interface(sr, rt_walker->interface);
 
-    cur_rt_entry = cur_rt_entry->next;
+    rt_walker = rt_walker->next;
   }
-  // We don't have default entry, so just return null
+  // We haven't found an entry, so just return null
   return NULL;
 }
 
@@ -274,7 +274,7 @@ void sr_forward_packet(struct sr_instance *sr, uint8_t *packet, unsigned int len
  * adding a data section to the packet (only used when we
  * get an ICMP message in sr_handle_ip.c)
  */
-int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if * rec_if) {
+int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, uint8_t *packet, int len, struct sr_if * rec_iface) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
   sr_icmp_hdr_t *icmp_hdr = packet_get_icmp_hdr(packet);
@@ -286,13 +286,13 @@ int sr_send_icmp(struct sr_instance *sr, uint8_t icmp_type, uint8_t icmp_code, u
   memcpy(eth_hdr->ether_shost, out_if->addr, ETHER_ADDR_LEN);
 
   uint32_t req_src = ip_hdr->ip_src;
-  ip_hdr->ip_src = rec_if->ip; // src is this interface's ip
+  ip_hdr->ip_src = rec_iface->ip; // src is this interface's ip
   ip_hdr->ip_dst = req_src; // dst is requester's ip
 
   icmp_hdr->icmp_type = icmp_type;
   icmp_hdr->icmp_code = icmp_code;
   icmp_hdr->icmp_sum = cksum(icmp_hdr,
-      sizeof(sr_icmp_hdr_t)); // cksum of ICMP
+      sizeof(sr_icmp_hdr_t)); // compute checksum of hdr
 
   int res = sr_send_packet(sr, packet, len, out_if->name);
   return res;
