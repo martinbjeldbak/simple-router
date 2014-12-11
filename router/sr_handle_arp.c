@@ -36,14 +36,15 @@ void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_
     // Go through request queue and send packets waiting on this reply
     if(req) {
       // Get waiting packets
-      struct sr_packet *waiter = req->packets;
+      struct sr_packet *waiting_packet_walker = req->packets;
       // Loop through waiting
-      while(waiter) {
-
+      while(waiting_packet_walker) {
         Debug("Forwarding packet that has been waiting for ARP reply\n");
-        sr_forward_packet(sr, waiter->buf, waiter->len, arp_hdr->ar_sha, iface);
+        sr_forward_packet(sr, waiting_packet_walker->buf,
+            waiting_packet_walker->len, arp_hdr->ar_sha, iface);
 
-        waiter = waiter->next; // try to go to next waiting packet
+        // try to go to a next waiting packet
+        waiting_packet_walker = waiting_packet_walker->next; 
       }
       // Drop the request from oustanding queue since it is now forwarded
       sr_arpreq_destroy(&sr->cache, req);
@@ -75,7 +76,6 @@ void sr_handle_arp_req(struct sr_instance* sr,
 
     // Put our new packet back on the wire
     sr_send_packet(sr, rep_packet, len, iface->name);
-    free(rep_packet);
   }
 
   // Insert this host into our ARP cache, even if ARP req isn't for us
