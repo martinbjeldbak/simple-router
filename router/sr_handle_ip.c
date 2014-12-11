@@ -9,13 +9,15 @@
 void sr_handle_ip(struct sr_instance* sr, uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
   sr_ip_hdr_t *ip_hdr = packet_get_ip_hdr(packet);
 
-  /*
-  if(!sanity_check_ip_packet_len_ok(len))
-    Debug("Sanity check for IP packet failed! Quitting.\n"); return;
+  if(!sanity_check_ip_packet_len_ok(len)) {
+    Debug("Sanity check for IP packet failed! Dropping packet.\n");
+    return;
+  }
 
-  if(!is_ip_chksum_ok(ip_hdr))
-    Debug("Computed checksum IP is not same as given. Dropping packet\n"); return;
-    */
+  if(!is_ip_chksum_ok(ip_hdr)) {
+    Debug("Computed checksum IP is not same as given. Dropping packet.\n"); return;
+    return;
+  }
 
   struct sr_if *iface_walker = sr->if_list;
 
