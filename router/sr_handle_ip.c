@@ -9,16 +9,16 @@
  * header, along with making sure that the header checksum is calculated correctly
  */
 uint8_t is_sanity_check_of_ip_packet_ok(sr_ip_hdr_t *ip_hdr, unsigned int len) {
-  uint8_t flag = 1; // assume all is well
+  uint8_t we_good = 1; // assume all is well
   if(!sanity_check_ip_packet_len_ok(len)) {
     Debug("Sanity check for IP packet failed! Dropping packet.\n");
-    flag = 0;
+    we_good = 0;
   }
   if(!is_ip_chksum_ok(ip_hdr)) {
     Debug("Computed checksum IP is not same as given. Dropping packet.\n");
-    flag = 0;
+    we_good = 0;
   }
-  return flag;
+  return we_good;
 }
 
 /* Scope: local to this file
@@ -27,17 +27,17 @@ uint8_t is_sanity_check_of_ip_packet_ok(sr_ip_hdr_t *ip_hdr, unsigned int len) {
  */
 uint8_t is_sanity_check_of_icmp_packet_ok(sr_ip_hdr_t *ip_hdr,
     sr_icmp_hdr_t *icmp_hdr, unsigned int len) {
-  uint8_t flag = 1;
+  uint8_t we_good = 1;
 
   if(!sanity_check_icmp_packet_len_ok(len)) {
     Debug("Received ICMP packet that was too small. Dropping packet.\n");
-    flag = 0;
+    we_good = 0;
   }
   if(!is_icmp_chksum_ok(ip_hdr->ip_len, icmp_hdr)) {
     Debug("Computed ICMP checksum is not same as given. Dropping packet.\n"); 
-    flag = 0;
+    we_good = 0;
   }
-  return flag;
+  return we_good;
 }
 
 void sr_handle_ip(struct sr_instance* sr, uint8_t *packet,
