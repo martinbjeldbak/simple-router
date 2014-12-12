@@ -4,6 +4,10 @@
 #include "sr_utils.h"
 #include "sr_handle_arp.h"
 
+void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr,
+    struct sr_if *rec_iface) {
+}
+
 void sr_handle_arp(struct sr_instance* sr,
     uint8_t *packet, unsigned int len, struct sr_if *rec_iface) {
   sr_ethernet_hdr_t *eth_hdr = packet_get_eth_hdr(packet);
@@ -81,53 +85,12 @@ void sr_handle_arp_req(struct sr_instance* sr,
   sr_arpcache_insert(&sr->cache, req_arp_hdr->ar_sha, req_arp_hdr->ar_sip);
 
   // If the ARP req was for this me, respond with ARP reply
+  sr_send_arp_rep(sr, req_eth_hdr, req_arp_hdr, rec_iface);
+
   // I could also compare ethernet addresses here
   if(req_arp_hdr->ar_tip == rec_iface->ip) {
     Debug("\tGot ARP request at interfce %s, constructing reply\n", rec_iface->name);
 
-    unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
-    uint8_t *rep_packet = (uint8_t *)malloc(len);
-    bzero(rep_packet, len);
-
-    // Construct ethernet hdr part of ARP reply packet
-    construct_arp_rep_eth_hdr_at(rep_packet, req_eth_hdr, rec_iface);
-
-    // Construct ARP hdr
-    construct_arp_rep_hdr_at(rep_packet + sizeof(sr_ethernet_hdr_t),
-        req_arp_hdr, rec_iface);
-
-    // Put our new (modified) packet back on the wire
-    sr_send_packet(sr, rep_packet, len, rec_iface->name);
   }
-}
-
-void construct_arp_rep_eth_hdr_at(uint8_t *buf, sr_ethernet_hdr_t *eth_hdr, struct sr_if *rec_iface) {
-  // Construct ethernet hdr
-  struct sr_ethernet_hdr *rep_eth_hdr = (sr_ethernet_hdr_t *)buf;
-  // set destination to origin
-  memcpy(rep_eth_hdr->ether_dhost,
-      eth_hdr->ether_shost, ETHER_ADDR_LEN);
-  //set source to our interface's eth addr
-  memcpy(rep_eth_hdr->ether_shost,
-      rec_iface->addr, ETHER_ADDR_LEN);
-  // ethernet type is ARP
-  rep_eth_hdr->ether_type = ntohs(ethertype_arp);
-}
-
-
-void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr,
-    struct sr_if *rec_iface) {
-    sr_arp_hdr_t *rep_arp_hdr = (sr_arp_hdr_t *)buf;
-    rep_arp_hdr->ar_hrd = arp_hdr->ar_hrd; // 1 for ethernet
-    rep_arp_hdr->ar_pro = arp_hdr->ar_pro; // protocol format is IPv4 (0x800)
-    rep_arp_hdr->ar_hln = arp_hdr->ar_hln; // hardware length is same (6 = ETHER_ADDR_LEN)
-    rep_arp_hdr->ar_pln = arp_hdr->ar_pln; // protocol length is same (4)
-    rep_arp_hdr->ar_op = htons(arp_op_reply); // ARP reply
-    memcpy(rep_arp_hdr->ar_sha,
-        rec_iface->addr, ETHER_ADDR_LEN); // set hw addr
-    rep_arp_hdr->ar_sip = rec_iface->ip; // setting us as sender
-    memcpy(rep_arp_hdr->ar_tha,
-        arp_hdr->ar_sha, ETHER_ADDR_LEN); // target
-    rep_arp_hdr->ar_tip = arp_hdr->ar_sip;
 }
 

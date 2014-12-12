@@ -7,7 +7,5 @@ void sr_handle_arp_req(struct sr_instance* sr, sr_ethernet_hdr_t *req_eth_hdr, s
 
 void sr_handle_arp_rep(struct sr_instance* sr, sr_arp_hdr_t *arp_hdr, struct sr_if* rec_iface);
 
-void construct_arp_rep_hdr_at(uint8_t *buf, sr_arp_hdr_t *arp_hdr, struct sr_if *rec_iface);
-void construct_arp_rep_eth_hdr_at(uint8_t *buf, sr_ethernet_hdr_t *eth_hdr, struct sr_if *rec_iface);
 
 #endif

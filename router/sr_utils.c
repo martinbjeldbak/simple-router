@@ -355,6 +355,44 @@ int sr_send_arp_req(struct sr_instance *sr, uint32_t tip) {
   return res;
 }
 
+int sr_send_arp_rep(struct sr_instance *sr, sr_ethernet_hdr_t *req_eth_hdr,
+    sr_arp_hdr_t *req_arp_hdr, struct sr_if* rec_iface) {
+  unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
+  uint8_t *rep_packet = (uint8_t *)malloc(len);
+  bzero(rep_packet, len);
+
+  // Get headers of our new packet
+  sr_ethernet_hdr_t *rep_eth_hdr = packet_get_eth_hdr(rep_packet);
+  sr_arp_hdr_t *rep_arp_hdr = packet_get_arp_hdr(rep_packet);
+
+  // Fill eth header entries
+  // set destination to origin
+  memcpy(rep_eth_hdr->ether_dhost,
+      req_eth_hdr->ether_shost, ETHER_ADDR_LEN);
+  //set source to our interface's eth addr
+  memcpy(rep_eth_hdr->ether_shost,
+      rec_iface->addr, ETHER_ADDR_LEN);
+  // ethernet type is ARP
+  rep_eth_hdr->ether_type = ntohs(ethertype_arp);
+
+  // Fill ARP hdr entries
+  rep_arp_hdr->ar_hrd = req_arp_hdr->ar_hrd; // 1 for ethernet
+  rep_arp_hdr->ar_pro = req_arp_hdr->ar_pro; // protocol format is IPv4 (0x800)
+  rep_arp_hdr->ar_hln = req_arp_hdr->ar_hln; // hardware length is same (6 = ETHER_ADDR_LEN)
+  rep_arp_hdr->ar_pln = req_arp_hdr->ar_pln; // protocol length is same (4)
+  rep_arp_hdr->ar_op = htons(arp_op_reply); // ARP reply
+  memcpy(rep_arp_hdr->ar_sha,
+      rec_iface->addr, ETHER_ADDR_LEN); // set hw addr
+  rep_arp_hdr->ar_sip = rec_iface->ip; // setting us as sender
+  memcpy(rep_arp_hdr->ar_tha,
+      req_arp_hdr->ar_sha, ETHER_ADDR_LEN); // target
+  rep_arp_hdr->ar_tip = req_arp_hdr->ar_sip;
+
+  // Put our new (modified) packet back on the wire
+  int res = sr_send_packet(sr, rep_packet, len, rec_iface->name);
+  return res;
+}
+
 uint8_t sanity_check_arp_packet_len_ok(unsigned int len) {
   uint8_t under = len >= (sizeof(sr_ethernet_hdr_t) +
       sizeof(sr_arp_hdr_t));
