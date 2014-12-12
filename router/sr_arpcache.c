@@ -19,12 +19,15 @@
 void sr_arpcache_handle_req_sending(struct sr_instance *sr, struct sr_arpreq *req) {
   time_t now = time(NULL);
 
+  // Since there can be multiple calls to this function,
+  // get exclusive access to the cache
+  pthread_mutex_lock(&sr->cache.lock);
+
   if(difftime(now, req->sent) > 1.0) {
     Debug("\t\tARP req still pending, finding out whether to drop or send again\n");
 
     if(req->times_sent >= 5) {
-      Debug("Dropping ARP request and sending ICMP host unreachable\
-          to all waiting hosts\n");
+      Debug("Dropping ARP request and sending ICMP host unreachable to all waiting hosts\n");
 
       struct sr_packet *cur_req_packet = req->packets;
 
@@ -43,6 +46,7 @@ void sr_arpcache_handle_req_sending(struct sr_instance *sr, struct sr_arpreq *re
       req->times_sent++;
     }
   }
+  pthread_mutex_unlock(&sr->cache.lock);
 }
 
 /* 
